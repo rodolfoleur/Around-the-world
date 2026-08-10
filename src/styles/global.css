@@ -1,0 +1,329 @@
+/* ============================================================
+   Voyager — design tokens, ported from the Claude Design
+   prototype (paper tones, Public Sans + IBM Plex Mono).
+   ============================================================ */
+:root {
+  --ink: #1c1b19;
+  --terra: #c96f3f;
+  --terra-dark: #a85628;
+  --bone: #faf8f4;
+  --paper: #e9e4da;
+  --muted: #8a8377;
+  --muted-2: #a09889;
+  --muted-3: #bdb5a6;
+  --line: rgba(28, 27, 25, 0.09);
+  --line-strong: rgba(28, 27, 25, 0.16);
+  --wash: #f1ece1;
+  --wash-2: #f0ebe0;
+  --sage: #6b8f5a;
+  --blue: #3f6f8f;
+  --plum: #8a6a9f;
+  --gold: #b08d4f;
+
+  --font-sans: 'Public Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font-family: inherit; color: inherit; }
+button { -webkit-appearance: none; appearance: none; }
+a { color: var(--terra); text-decoration: none; }
+a:hover { color: var(--terra-dark); }
+
+::-webkit-scrollbar { width: 0; height: 0; }
+
+.mono { font-family: var(--font-mono); }
+
+@keyframes sheetUp { from { transform: translateY(101%); } to { transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- outer page (centers the "device" on wide viewports) ---------- */
+.app-page {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: var(--paper);
+}
+
+.app-frame {
+  width: 100%;
+  max-width: 460px;
+  /* Fixed viewport-height frame (not just min-height) so the flex column
+     below actually constrains .app-screen to scroll internally, and so
+     sheets anchored to the frame's bottom sit at the visible fold instead
+     of the bottom of whatever tall content the current screen has. */
+  height: 100dvh;
+  background: var(--bone);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (min-width: 560px) {
+  .app-page { align-items: center; padding: 40px 16px; }
+  .app-frame {
+    height: min(874px, calc(100dvh - 80px));
+    border-radius: 40px;
+    box-shadow: 0 40px 80px rgba(28, 27, 25, 0.18), 0 0 0 1px rgba(28, 27, 25, 0.08);
+  }
+}
+
+.app-screen {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 6px;
+}
+
+/* ---------- typography ---------- */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+h1, h2, h3 { font-family: var(--font-sans); margin: 0; letter-spacing: -0.03em; }
+
+.h2 { font-weight: 700; font-size: 29px; }
+.h3 { font-weight: 600; font-size: 19px; letter-spacing: -0.02em; }
+
+/* ---------- page padding ---------- */
+.pad { padding: 0 20px 26px; }
+.pad-top { padding: 0 0 26px; }
+
+/* ---------- pills / chips ---------- */
+.pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--bone);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.pill.on { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+
+/* ---------- cards / buttons ---------- */
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.card-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 15px;
+  transition: border-color .15s ease;
+}
+.card-btn:hover { border-color: var(--line-strong); }
+
+.card-dark {
+  background: var(--ink);
+  color: var(--bone);
+  border-radius: 18px;
+}
+
+.btn-primary {
+  border: 0;
+  border-radius: 99px;
+  background: var(--terra);
+  color: var(--bone);
+  font-family: var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.btn-primary:hover { background: var(--terra-dark); }
+
+.btn-dark {
+  border: 0;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.btn-outline {
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 14px;
+}
+.btn-outline:hover { background: var(--wash); }
+
+.dash-btn {
+  border: 1px dashed var(--line-strong);
+  background: none;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 15px;
+  transition: color .15s ease, border-color .15s ease;
+}
+.dash-btn:hover { border-color: var(--terra); color: var(--terra); }
+
+/* ---------- bar / progress ---------- */
+.bar-track {
+  display: flex;
+  gap: 2px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--wash-2);
+}
+.bar-track > span { display: block; }
+
+/* ---------- tab bar ---------- */
+.tabbar {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding: 10px 8px calc(20px + var(--safe-bottom));
+  background: rgba(250, 248, 244, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid var(--line);
+  position: relative;
+  z-index: 5;
+}
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.tab-btn .ic { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+.tab-btn .lb { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ---------- day rail (itinerary) ---------- */
+.day-rail {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 0 20px 16px;
+  scroll-behavior: smooth;
+}
+.day-chip {
+  flex: none;
+  width: 48px;
+  padding: 9px 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+}
+.day-chip.active { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+.day-chip .dow { display: block; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.6; margin-bottom: 3px; }
+.day-chip .num { display: block; font-family: var(--font-mono); font-size: 16px; }
+.day-chip .dot { display: block; width: 5px; height: 5px; border-radius: 99px; margin: 5px auto 0; background: transparent; }
+
+/* ---------- sheets ---------- */
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 27, 25, 0.42);
+  z-index: 80;
+  animation: fadeIn 0.2s ease;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.sheet-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 81;
+  background: var(--bone);
+  border-radius: 26px 26px 0 0;
+  max-height: 88%;
+  overflow: auto;
+  animation: sheetUp 0.3s cubic-bezier(.32, .72, 0, 1);
+  box-shadow: 0 -12px 40px rgba(28, 27, 25, 0.18);
+  padding-bottom: var(--safe-bottom);
+}
+.sheet-grabber {
+  position: sticky;
+  top: 0;
+  background: var(--bone);
+  padding: 10px 0 4px;
+  display: flex;
+  justify-content: center;
+  z-index: 1;
+}
+.sheet-grabber span {
+  width: 38px; height: 4px; border-radius: 99px; background: #ddd6c8;
+}
+
+/* ---------- misc ---------- */
+.dot { display: inline-block; border-radius: 99px; }
+.hairline { height: 1px; background: var(--wash-2); }
+
+input[type="text"], input[type="number"], input[type="date"], input[type="email"], input[type="password"] {
+  font-family: var(--font-sans);
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  width: 100%;
+  color-scheme: light;
+}
+input:focus { outline: 2px solid var(--terra); outline-offset: 1px; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  margin-bottom: 7px;
+  display: block;
+}
+
+/* ---------- trip cards (Trips home) ---------- */
+.trip-card { padding: 16px; }
+.trip-card.past { opacity: 0.72; }
