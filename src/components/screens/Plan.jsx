@@ -91,6 +91,7 @@ export default function Plan({ trip }) {
   const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight, updateDayCity } = trip;
   const railRef = useRef(null);
   const lastDay = useRef(null);
+  const [showWxDetail, setShowWxDetail] = useState(false);
 
   useEffect(() => {
     if (lastDay.current === state.day || !railRef.current) return;
@@ -98,6 +99,8 @@ export default function Plan({ trip }) {
     railRef.current.scrollLeft = Math.max(0, state.day * chip - railRef.current.clientWidth / 2 + chip / 2);
     lastDay.current = state.day;
   }, [state.day]);
+
+  useEffect(() => { setShowWxDetail(false); }, [state.day]);
 
   const tc = tagColor(day.tag);
   const parts = getDayParts(day, dayExtra);
@@ -116,13 +119,43 @@ export default function Plan({ trip }) {
             style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, background: tc.bg, color: tc.fg }}
           >{day.tag}</span>
           {todayWx && (
-            <span className="weather-wide-header mono" style={{ fontSize: 11.5, color: 'var(--muted)', alignItems: 'center', gap: 5 }}>
+            <button
+              type="button"
+              onClick={() => setShowWxDetail((s) => !s)}
+              className="weather-wide-header mono"
+              style={{
+                fontSize: 11.5, color: 'var(--muted)', alignItems: 'center', gap: 5, border: 0, background: 'none',
+                cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+              }}
+            >
               <span>{weatherIcon(todayWx.code).icon}</span>
               <span>{Math.round(todayWx.max)}° / {Math.round(todayWx.min)}°</span>
               <span style={{ color: 'var(--muted-3)' }}>{todayWx.city}</span>
-            </span>
+              <span style={{ fontSize: 9, color: 'var(--muted-3)' }}>{showWxDetail ? '▲' : '▼'}</span>
+            </button>
           )}
         </div>
+
+        {showWxDetail && todayWx && (
+          <div className="card" style={{ padding: '14px 16px', marginBottom: 16, display: 'flex', gap: 22, flexWrap: 'wrap' }}>
+            <div>
+              <div className="mono" style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 4 }}>Conditions</div>
+              <div style={{ fontSize: 13.5, fontWeight: 500 }}>{weatherIcon(todayWx.code).icon} {weatherIcon(todayWx.code).label}</div>
+            </div>
+            <div>
+              <div className="mono" style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 4 }}>Wind</div>
+              <div className="mono" style={{ fontSize: 13.5, fontWeight: 500 }}>{todayWx.wind != null ? `${Math.round(todayWx.wind)} km/h` : '—'}</div>
+            </div>
+            <div>
+              <div className="mono" style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 4 }}>Chance of rain</div>
+              <div className="mono" style={{ fontSize: 13.5, fontWeight: 500 }}>{todayWx.precipChance != null ? `${Math.round(todayWx.precipChance)}%` : '—'}</div>
+            </div>
+            <div>
+              <div className="mono" style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 4 }}>Precipitation</div>
+              <div className="mono" style={{ fontSize: 13.5, fontWeight: 500 }}>{todayWx.precipMm != null ? `${todayWx.precipMm} mm` : '—'}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div ref={railRef} className="day-rail">

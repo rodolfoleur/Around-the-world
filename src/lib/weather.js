@@ -43,9 +43,14 @@ export function weatherIcon(code) {
  * (see clampToForecastRange) so a too-far-future request doesn't fail
  * outright and blank out days that ARE in range.
  */
+const DAILY_FIELDS = [
+  'temperature_2m_max', 'temperature_2m_min', 'weathercode',
+  'windspeed_10m_max', 'precipitation_probability_max', 'precipitation_sum',
+];
+
 export async function fetchDailyForecast(lat, lon, startIso, endIso) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto` +
+    `&daily=${DAILY_FIELDS.join(',')}&timezone=auto` +
     `&start_date=${startIso}&end_date=${endIso}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('weather request failed: ' + res.status);
@@ -57,6 +62,9 @@ export async function fetchDailyForecast(lat, lon, startIso, endIso) {
       max: data.daily.temperature_2m_max[i],
       min: data.daily.temperature_2m_min[i],
       code: data.daily.weathercode[i],
+      wind: data.daily.windspeed_10m_max?.[i],
+      precipChance: data.daily.precipitation_probability_max?.[i],
+      precipMm: data.daily.precipitation_sum?.[i],
     };
   });
   return out;
