@@ -50,7 +50,7 @@ function buildMonths(days) {
 
 export default function Calendar({ trip }) {
   const { meta, days, patch } = trip;
-  const { forecast } = useTripWeather(meta, days);
+  const { forecast, typical } = useTripWeather(meta, days);
   const months = buildMonths(days);
 
   const openDay = (index) => patch({ tab: 'plan', day: index, sheet: null });
@@ -81,6 +81,7 @@ export default function Calendar({ trip }) {
                 }
                 const { day, index } = entry;
                 const wx = forecast[day.iso];
+                const typ = !wx ? typical[day.iso] : null;
                 const city = day.city || (meta.curated ? CITY_COORDS[CITY_BY_DAY[index]]?.label : '') || '';
                 const glyph = travelGlyph(day, meta.bookings);
                 const summary = daySummary(day, meta.extraActivities[index]);
@@ -95,6 +96,7 @@ export default function Calendar({ trip }) {
                       {city && <div className="cal-city">{city}</div>}
                       {summary && <div className="cal-summary">{summary}</div>}
                       {wx && <div className="mono cal-wx">{weatherIcon(wx.code).icon} {Math.round(wx.max)}°</div>}
+                      {typ && <div className="mono cal-wx" title="Typical, not a forecast">~{Math.round(typ.avgMax)}°</div>}
                     </div>
                   </button>
                 );

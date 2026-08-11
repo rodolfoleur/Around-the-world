@@ -96,3 +96,68 @@ export function clampToForecastRange(startIso, endIso) {
   if (clampedStart > clampedEnd) return null;
   return { startIso: clampedStart, endIso: clampedEnd };
 }
+
+/**
+ * Actual historical daily max/min (°C) for a lat/lon over an ISO date
+ * range, keyed by ISO date — real recorded weather, not a forecast.
+ * Open-Meteo's archive has global coverage going back decades, free,
+ * no key. Used to build a "typical for this time of year" estimate for
+ * dates too far out for a real forecast.
+ */
+export async function fetchHistoricalDaily(lat, lon, startIso, endIso) {
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}` +
+    `&daily=temperature_2m_max,temperature_2m_min&timezone=auto` +
+    `&start_date=${startIso}&end_date=${endIso}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('historical weather request failed: ' + res.status);
+  const data = await res.json();
+  const out = {};
+  const days = data.daily?.time || [];
+  days.forEach((iso, i) => {
+    const max = data.daily.temperature_2m_max[i];
+    const min = data.daily.temperature_2m_min[i];
+    if (max == null || min == null) return;
+    out[iso] = { max, min };
+  });
+  return out;
+}
+
+/**
+ * "Typical" weather for a lat/lon on a set of future dates: pulls the same
+ * calendar dates from each of the last `yearsBack` years and averages
+ * max/min per month-day across them. Not a forecast — a packing-guide
+ * estimate. Returns { [MM-DD]: { avgMax, avgMin, years } }; callers match
+ * a future date to its MM-DD to look up the average.
+ */
+export async function fetchTypicalWeather(lat, lon, dates, yearsBack = 5) {
+  if (!dates.length) return {};
+  const years = [...new Set(dates.map((iso) => Number(iso.slice(0, 4))))];
+  const sums = {}; // 'MM-DD' -> { maxSum, minSum, count }
+
+  const perYear = await Promise.all(years.flatMap((tripYear) => {
+    const yearDates = dates.filter((iso) => Number(iso.slice(0, 4)) === tripYear);
+    const start = yearDates[0];
+    const end = yearDates[yearDates.length - 1];
+    return Array.from({ length: yearsBack }, (_, i) => i + 1).map((back) => {
+      const shift = (iso) => (Number(iso.slice(0, 4)) - back) + iso.slice(4);
+      return fetchHistoricalDaily(lat, lon, shift(start), shift(end)).catch(() => null);
+    });
+  }));
+
+  perYear.forEach((yearData) => {
+    if (!yearData) return;
+    Object.entries(yearData).forEach(([iso, v]) => {
+      const md = iso.slice(5); // 'MM-DD'
+      if (!sums[md]) sums[md] = { maxSum: 0, minSum: 0, count: 0 };
+      sums[md].maxSum += v.max;
+      sums[md].minSum += v.min;
+      sums[md].count += 1;
+    });
+  });
+
+  const out = {};
+  Object.entries(sums).forEach(([md, s]) => {
+    if (s.count > 0) out[md] = { avgMax: s.maxSum / s.count, avgMin: s.minSum / s.count, years: s.count };
+  });
+  return out;
+}

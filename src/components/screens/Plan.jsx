@@ -104,8 +104,9 @@ export default function Plan({ trip }) {
 
   const tc = tagColor(day.tag);
   const parts = getDayParts(day, dayExtra);
-  const { forecast } = useTripWeather(meta, days);
+  const { forecast, typical } = useTripWeather(meta, days);
   const todayWx = forecast[day.iso];
+  const todayTypical = !todayWx ? typical[day.iso] : null;
   const effectiveCity = day.city || (meta.curated ? (CITY_COORDS[CITY_BY_DAY[state.day]]?.label || '') : '');
 
   return (
@@ -133,6 +134,17 @@ export default function Plan({ trip }) {
               <span style={{ color: 'var(--muted-3)' }}>{todayWx.city}</span>
               <span style={{ fontSize: 9, color: 'var(--muted-3)' }}>{showWxDetail ? '▲' : '▼'}</span>
             </button>
+          )}
+          {todayTypical && (
+            <span
+              className="weather-wide-header mono"
+              title={`Average over the last ${todayTypical.years} year${todayTypical.years === 1 ? '' : 's'} — not a forecast`}
+              style={{ fontSize: 11.5, color: 'var(--muted-3)', alignItems: 'center', gap: 5 }}
+            >
+              <span>🌡️</span>
+              <span>~{Math.round(todayTypical.avgMax)}° / {Math.round(todayTypical.avgMin)}°</span>
+              <span>typical · {todayTypical.city}</span>
+            </span>
           )}
         </div>
 
@@ -163,6 +175,7 @@ export default function Plan({ trip }) {
           const active = state.day === i;
           const hasContent = dayHasContent(d, meta.extraActivities[i]);
           const wx = forecast[d.iso];
+          const typ = !wx ? typical[d.iso] : null;
           return (
             <button
               key={i}
@@ -175,14 +188,19 @@ export default function Plan({ trip }) {
               {/* dot is the always-visible (mobile) indicator; the weather
                   chip replaces it only at the wide breakpoint, via CSS —
                   both render so mobile never loses the dot on days that
-                  happen to have a forecast. */}
+                  happen to have a forecast (real or typical). */}
               {wx && (
                 <span className="weather-wide-chip" style={{ fontSize: 10, marginTop: 3 }}>
                   {weatherIcon(wx.code).icon} {Math.round(wx.max)}°
                 </span>
               )}
+              {typ && (
+                <span className="weather-wide-chip" style={{ fontSize: 10, marginTop: 3, color: 'var(--muted-3)' }} title="Typical, not a forecast">
+                  ~{Math.round(typ.avgMax)}°
+                </span>
+              )}
               <span
-                className={'dot' + (wx ? ' has-weather-wide' : '')}
+                className={'dot' + (wx || typ ? ' has-weather-wide' : '')}
                 style={{ width: 5, height: 5, margin: '5px auto 0', background: active ? 'var(--bone)' : (d.transit.length ? TERRA : (hasContent ? '#ddd6c8' : 'transparent')) }}
               />
             </button>
