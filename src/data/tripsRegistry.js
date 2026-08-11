@@ -48,18 +48,29 @@ function newTripId() {
   return `trip-${Date.now()}-${counter}`;
 }
 
-/** Builds a brand-new, empty trip from the create-trip form fields. */
-export function createEmptyTrip({ title, startDate, endDate, travelersText }) {
+/**
+ * Builds a brand-new trip from the create-trip form fields. `route` and
+ * `dayThemes` are optional — filled in when the trip came from the AI
+ * description flow, blank/omitted for a manually-created trip. A day
+ * theme becomes that day's morning slot, so it shows up in Plan/Trip
+ * like any other planned item; themes are zipped to days by index and
+ * simply run out silently if the AI returned fewer than there are days.
+ */
+export function createEmptyTrip({ title, startDate, endDate, travelersText, route, dayThemes }) {
+  const days = emptyDaysForRange(startDate, endDate);
+  (dayThemes || []).forEach((theme, i) => {
+    if (days[i] && theme && theme.trim()) days[i].parts.morning = theme.trim();
+  });
   return {
     id: newTripId(),
     title: title.trim(),
     startDate,
     endDate,
     travelers: parseTravelers(travelersText),
-    route: '',
+    route: (route || '').trim(),
     currency: 'GBP',
     curated: false,
-    days: emptyDaysForRange(startDate, endDate),
+    days,
     bookings: [],
     costs: [],
   };
