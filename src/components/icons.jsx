@@ -91,8 +91,20 @@ export function CreditIcon(props) {
   );
 }
 
+export function TicketIcon(props) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" {...props}>
+      <path
+        d="M2.5 7.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v.3a1.7 1.7 0 0 0 0 3.4v.3a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-.3a1.7 1.7 0 0 0 0-3.4z"
+        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"
+      />
+      <path d="M8 5.8v8.4" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1.6 1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export const PAY_ICONS = { Cash: CashIcon, Debit: DebitIcon, Credit: CreditIcon };
-export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon };
+export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon };
 
 export function SearchIcon(props) {
   return (

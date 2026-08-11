@@ -14,6 +14,7 @@ const TABS = [
   ['plan', 'Plan'],
   ['map', 'Journey'],
   ['budget', 'Costs'],
+  ['bookings', 'Bookings'],
 ];
 
 /** The full single-trip experience — tab bar, screens and sheets — for one trip descriptor. */

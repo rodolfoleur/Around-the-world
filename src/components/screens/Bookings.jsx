@@ -1,25 +1,11 @@
-import { ChevronLeftIcon } from '../../components/icons.jsx';
-
 const FILTERS = ['All', 'Flights', 'Stays', 'Ground', 'Car'];
 
 export default function Bookings({ trip }) {
-  const { state, patch, go, bookings, openBooking } = trip;
+  const { state, patch, bookings, openBooking } = trip;
   const filtered = bookings.filter((b) => state.bFilter === 'All' || b.group === state.bFilter);
 
   return (
-    <div className="pad">
-      <button
-        type="button"
-        onClick={() => go('home')}
-        className="mono"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 6, border: 0, background: 'none', cursor: 'pointer',
-          padding: 0, margin: '2px 0 14px', fontSize: 10.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)',
-        }}
-      >
-        <ChevronLeftIcon /> Trip
-      </button>
-
+    <div className="pad" style={{ paddingTop: 20 }}>
       <h2 className="h2" style={{ marginBottom: 4 }}>Bookings</h2>
       <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)', marginBottom: 16 }}>Forwarded confirmations · auto-filed</div>
 
