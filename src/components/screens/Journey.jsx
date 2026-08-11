@@ -34,49 +34,53 @@ export default function Journey({ trip }) {
         <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)' }}>6 flights · 5 ground transfers · 1 car rental</div>
       </div>
 
-      <div style={{ margin: '0 20px', borderRadius: 18, overflow: 'hidden', border: '1px solid var(--line)', background: '#eae4d6', position: 'relative', height: 290 }}>
-        <JourneyMap />
-      </div>
+      <div className="journey-columns" style={{ padding: '0 20px' }}>
+        <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--line)', background: '#eae4d6', position: 'relative', height: 290 }}>
+          <JourneyMap />
+        </div>
 
-      <div style={{ display: 'flex', gap: 6, padding: '14px 20px 4px' }}>
-        {FILTERS.map((f) => (
-          <button key={f} type="button" className={'pill' + (state.legFilter === f ? ' on' : '')} onClick={() => patch({ legFilter: f })}>
-            {f}
-          </button>
-        ))}
-      </div>
+        <div>
+          <div style={{ display: 'flex', gap: 6, padding: '14px 0 4px' }}>
+            {FILTERS.map((f) => (
+              <button key={f} type="button" className={'pill' + (state.legFilter === f ? ' on' : '')} onClick={() => patch({ legFilter: f })}>
+                {f}
+              </button>
+            ))}
+          </div>
 
-      <div style={{ padding: '8px 20px 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {legs.map((l) => (
-          <button
-            key={l.n}
-            type="button"
-            onClick={() => openBooking(l.bk)}
-            style={{
-              display: 'flex', gap: 13, alignItems: 'center', padding: '12px 0', border: 0,
-              borderBottom: '1px solid var(--wash-2)', background: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', textAlign: 'left', width: '100%',
-            }}
-          >
-            <span
-              className="mono"
-              style={{
-                width: 24, height: 24, borderRadius: 99, color: 'var(--bone)', fontSize: 10,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
-                background: l.type === 'Flight' ? INK : (l.type === 'Car' ? PLUM : GOLD),
-              }}
-            >{l.n}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                <span className="mono" style={{ fontSize: 14, fontWeight: 500 }}>{l.from}</span>
-                <span style={{ color: '#c9c2b4', fontSize: 11 }}>→</span>
-                <span className="mono" style={{ fontSize: 14, fontWeight: 500 }}>{l.to}</span>
-              </span>
-              <span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{l.sub}</span>
-            </span>
-            <span className="mono" style={{ fontSize: 11, color: 'var(--muted-3)', flex: 'none', textAlign: 'right' }}>{l.when}</span>
-          </button>
-        ))}
+          <div style={{ padding: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {legs.map((l) => (
+              <button
+                key={l.n}
+                type="button"
+                onClick={() => openBooking(l.bk)}
+                style={{
+                  display: 'flex', gap: 13, alignItems: 'center', padding: '12px 0', border: 0,
+                  borderBottom: '1px solid var(--wash-2)', background: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', textAlign: 'left', width: '100%',
+                }}
+              >
+                <span
+                  className="mono"
+                  style={{
+                    width: 24, height: 24, borderRadius: 99, color: 'var(--bone)', fontSize: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                    background: l.type === 'Flight' ? INK : (l.type === 'Car' ? PLUM : GOLD),
+                  }}
+                >{l.n}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
+                    <span className="mono" style={{ fontSize: 14, fontWeight: 500 }}>{l.from}</span>
+                    <span style={{ color: '#c9c2b4', fontSize: 11 }}>→</span>
+                    <span className="mono" style={{ fontSize: 14, fontWeight: 500 }}>{l.to}</span>
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{l.sub}</span>
+                </span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--muted-3)', flex: 'none', textAlign: 'right' }}>{l.when}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

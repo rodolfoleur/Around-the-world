@@ -1,5 +1,5 @@
 import { useTripState } from '../state/useTripState.js';
-import { TAB_ICONS } from './icons.jsx';
+import { TAB_ICONS, ChevronLeftIcon } from './icons.jsx';
 import Trip from './screens/Trip.jsx';
 import Plan from './screens/Plan.jsx';
 import Journey from './screens/Journey.jsx';
@@ -33,6 +33,11 @@ export default function TripView({ meta, onBack, onUpdateTrip }) {
       </div>
 
       <nav className="tabbar" aria-label="Primary">
+        {onBack && (
+          <button type="button" className="sidebar-back" onClick={onBack}>
+            <ChevronLeftIcon /> All trips
+          </button>
+        )}
         {TABS.map(([key, label]) => {
           const Icon = TAB_ICONS[key];
           const active = state.tab === key;

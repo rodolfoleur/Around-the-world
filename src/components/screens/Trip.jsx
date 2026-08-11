@@ -37,7 +37,7 @@ export default function Trip({ trip, onBack }) {
         <button
           type="button"
           onClick={onBack}
-          className="mono"
+          className="mono mobile-only-back"
           style={{
             display: 'flex', alignItems: 'center', gap: 6, border: 0, background: 'none', cursor: 'pointer',
             padding: 0, margin: '2px 0 14px', fontSize: 10.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)',
@@ -116,56 +116,60 @@ export default function Trip({ trip, onBack }) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 className="h3">Next up — {nextDay.short}</h3>
-        <button
-          type="button"
-          onClick={() => go('plan')}
-          className="mono"
-          style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--terra)' }}
-        >Full plan →</button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
-        {nextParts.length === 0 && (
-          <button type="button" className="card-btn" style={{ padding: '13px 14px', color: 'var(--muted)' }} onClick={() => go('plan')}>
-            Nothing planned yet. Add an activity from the Plan tab.
-          </button>
-        )}
-        {nextParts.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            className="card-btn"
-            style={{ display: 'flex', gap: 13, alignItems: 'flex-start', padding: '13px 14px' }}
-            onClick={() => trip.patch({ tab: 'plan', day: nextDayIdx })}
-          >
-            <span className="mono" style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)', paddingTop: 3, width: 38, flex: 'none' }}>{p.short}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 3, lineHeight: 1.3 }}>
-                {p.items.map((it) => it.text).join(' · ')}
-              </span>
-              <span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted)' }}>{nextDay.label.split('·').pop().trim()}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {hasLooseEnds && (
-        <div className="card-dark" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--terra)' }} />
-            <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>Loose ends</span>
+      <div className="trip-columns">
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h3 className="h3">Next up — {nextDay.short}</h3>
+            <button
+              type="button"
+              onClick={() => go('plan')}
+              className="mono"
+              style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--terra)' }}
+            >Full plan →</button>
           </div>
-          <div style={{ fontWeight: 600, letterSpacing: '-.01em', fontSize: 16.5, lineHeight: 1.4, marginBottom: 13 }}>
-            {meta.curated
-              ? 'Aeroméxico baggage allowance is still unconfirmed, Aug 23 with David has no plan, and Aug 30 – Sep 3 in London is empty.'
-              : `${looseEndsText.charAt(0).toUpperCase()}${looseEndsText.slice(1)}.`}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
+            {nextParts.length === 0 && (
+              <button type="button" className="card-btn" style={{ padding: '13px 14px', color: 'var(--muted)' }} onClick={() => go('plan')}>
+                Nothing planned yet. Add an activity from the Plan tab.
+              </button>
+            )}
+            {nextParts.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                className="card-btn"
+                style={{ display: 'flex', gap: 13, alignItems: 'flex-start', padding: '13px 14px' }}
+                onClick={() => trip.patch({ tab: 'plan', day: nextDayIdx })}
+              >
+                <span className="mono" style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)', paddingTop: 3, width: 38, flex: 'none' }}>{p.short}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 3, lineHeight: 1.3 }}>
+                    {p.items.map((it) => it.text).join(' · ')}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted)' }}>{nextDay.label.split('·').pop().trim()}</span>
+                </span>
+              </button>
+            ))}
           </div>
-          <button type="button" className="btn-primary" style={{ padding: '9px 14px', fontSize: 10.5 }} onClick={() => go('plan')}>
-            Fill the gaps
-          </button>
         </div>
-      )}
+
+        {hasLooseEnds && (
+          <div className="card-dark" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--terra)' }} />
+              <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>Loose ends</span>
+            </div>
+            <div style={{ fontWeight: 600, letterSpacing: '-.01em', fontSize: 16.5, lineHeight: 1.4, marginBottom: 13 }}>
+              {meta.curated
+                ? 'Aeroméxico baggage allowance is still unconfirmed, Aug 23 with David has no plan, and Aug 30 – Sep 3 in London is empty.'
+                : `${looseEndsText.charAt(0).toUpperCase()}${looseEndsText.slice(1)}.`}
+            </div>
+            <button type="button" className="btn-primary" style={{ padding: '9px 14px', fontSize: 10.5 }} onClick={() => go('plan')}>
+              Fill the gaps
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

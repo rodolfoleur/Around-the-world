@@ -143,7 +143,7 @@ export default function TripsHome({ trips, onOpen, onCreate, household, members,
           + Plan your next trip
         </button>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+        <div className="trip-list" style={{ marginBottom: 28 }}>
           {upcoming.map((t) => <TripCard key={t.id} trip={t} onOpen={onOpen} />)}
         </div>
       )}
@@ -151,7 +151,7 @@ export default function TripsHome({ trips, onOpen, onCreate, household, members,
       {past.length > 0 && (
         <>
           <h3 className="h3" style={{ marginBottom: 12 }}>Past</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          <div className="trip-list" style={{ marginBottom: 12 }}>
             {past.map((t) => <TripCard key={t.id} trip={t} onOpen={onOpen} />)}
           </div>
         </>

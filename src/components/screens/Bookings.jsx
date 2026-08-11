@@ -23,7 +23,7 @@ export default function Bookings({ trip }) {
             ))}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="booking-list">
             {filtered.map((b) => {
               const idx = bookings.indexOf(b);
               const good = b.status === 'Confirmed' || b.status === 'Prepaid';
