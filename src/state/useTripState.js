@@ -198,8 +198,18 @@ export function useTripState(meta, onUpdateTrip) {
     state.bkLeftLabel, state.bkLeftValue, state.bkLeftSub, state.bkRightLabel, state.bkRightValue, state.bkRightSub,
     state.bkNote, bookings, onUpdateTrip, patch]);
 
-  /** Patches one field on one day within the trip's days array. */
+  /**
+   * Patches one field on one day within the trip's days array. Refuses to
+   * write if `days` looks empty/out of range — days should never actually
+   * be empty for a real trip, but this is the one place that persists the
+   * *entire* days array back to Supabase, so a bad transient read here
+   * would otherwise silently overwrite every day with nothing.
+   */
   const updateDayField = useCallback((dayIndex, field, value) => {
+    if (!days.length || dayIndex < 0 || dayIndex >= days.length) {
+      console.error('updateDayField: refusing to write — days is empty or index out of range', { dayIndex, daysLength: days.length });
+      return;
+    }
     const nextDays = days.map((d, i) => (i === dayIndex ? { ...d, [field]: value } : d));
     onUpdateTrip({ days: nextDays });
   }, [days, onUpdateTrip]);

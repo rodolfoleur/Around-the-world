@@ -6,10 +6,12 @@ import { SLOTS } from '../data/trip.js';
  * slot entries: { key, label, short, items: [{ text, extra? }] }.
  */
 export function getDayParts(day, extraForDay = {}) {
+  if (!day) return [];
+  const parts = day.parts || {};
   const out = [];
   SLOTS.forEach(([key, short, label]) => {
     const items = [];
-    if (day.parts[key]) items.push({ text: day.parts[key] });
+    if (parts[key]) items.push({ text: parts[key] });
     (extraForDay[key] || []).forEach((e) => items.push({ text: e.text, extra: true, kind: e.kind, time: e.time, location: e.location }));
     if (items.length) out.push({ key, short, label, items });
   });

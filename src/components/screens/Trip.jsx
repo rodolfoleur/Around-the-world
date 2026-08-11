@@ -15,8 +15,8 @@ export default function Trip({ trip, onBack }) {
 
   const clock = tripClock(days);
   const nextDayIdx = clock.currentIndex >= 0 ? clock.currentIndex : 0;
-  const nextDay = days[nextDayIdx];
-  const nextParts = getDayParts(nextDay, meta.extraActivities[nextDayIdx]).slice(0, 3);
+  const nextDay = days[nextDayIdx]; // days should never actually be empty for a real trip, but don't crash the whole dashboard if it somehow is
+  const nextParts = nextDay ? getDayParts(nextDay, meta.extraActivities[nextDayIdx]).slice(0, 3) : [];
 
   const countdownLabel = clock.status === 'live'
     ? 'happening now'
@@ -119,7 +119,7 @@ export default function Trip({ trip, onBack }) {
       <div className="trip-columns">
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 className="h3">Next up — {nextDay.short}</h3>
+            <h3 className="h3">Next up{nextDay ? ` — ${nextDay.short}` : ''}</h3>
             <button
               type="button"
               onClick={() => go('plan')}
@@ -130,7 +130,7 @@ export default function Trip({ trip, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
             {nextParts.length === 0 && (
               <button type="button" className="card-btn" style={{ padding: '13px 14px', color: 'var(--muted)' }} onClick={() => go('plan')}>
-                Nothing planned yet. Add an activity from the Plan tab.
+                {nextDay ? 'Nothing planned yet. Add an activity from the Plan tab.' : 'This trip has no days yet.'}
               </button>
             )}
             {nextParts.map((p) => (
@@ -146,7 +146,7 @@ export default function Trip({ trip, onBack }) {
                   <span style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 3, lineHeight: 1.3 }}>
                     {p.items.map((it) => it.text).join(' · ')}
                   </span>
-                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted)' }}>{nextDay.label.split('·').pop().trim()}</span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--muted)' }}>{nextDay?.label.split('·').pop().trim()}</span>
                 </span>
               </button>
             ))}
