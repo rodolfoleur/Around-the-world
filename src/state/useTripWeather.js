@@ -6,10 +6,21 @@ import { fetchDailyForecast, geocodeCity, clampToForecastRange } from '../lib/we
 // Open-Meteo for the same place name across trips/renders.
 const geocodeCache = new Map();
 
+/** Where a given day's weather should come from: an explicit override wins,
+ *  then the curated trip's built-in city, then the generic-trip lodging text. */
+function locationKeyFor(day, index, curated) {
+  const override = (day.city || '').trim();
+  if (override) return override;
+  if (curated) return CITY_BY_DAY[index] || '';
+  return (day.overnight || '').trim();
+}
+
 /**
  * Forecast per day, keyed by ISO date: { [iso]: { max, min, code, city } }.
- * Curated trips use real coordinates per city code (CITY_BY_DAY); other
- * trips geocode each day's `overnight` text. Only ever asks for the part
+ * A day's location, in priority order: an explicit `day.city` override (any
+ * trip — this is how changing a day's city, e.g. an extra night in Windsor,
+ * changes its weather too), else the curated trip's built-in city for that
+ * day, else a generic trip's `overnight` text. Only ever asks for the part
  * of the trip Open-Meteo can actually forecast (~16 days out) — days
  * further away just don't get an entry, no error shown for that.
  */
@@ -19,6 +30,10 @@ export function useTripWeather(meta, days) {
 
   const startIso = days[0]?.iso;
   const endIso = days[days.length - 1]?.iso;
+  // A plain-string fingerprint of "what city is each day resolved to" so
+  // editing a day's city (or lodging, on a generic trip) triggers a refetch
+  // without needing the whole `days` array/object identity as a dependency.
+  const citySignature = days.map((d, i) => locationKeyFor(d, i, meta.curated)).join('|');
 
   useEffect(() => {
     if (!startIso || !endIso) { setForecast({}); return; }
@@ -31,40 +46,46 @@ export function useTripWeather(meta, days) {
     (async () => {
       const merged = {};
 
-      if (meta.curated) {
-        const codes = [...new Set(days.map((_, i) => CITY_BY_DAY[i]).filter(Boolean))];
-        await Promise.all(codes.map(async (code) => {
-          const c = CITY_COORDS[code];
-          if (!c) return;
-          const data = await fetchDailyForecast(c.lat, c.lon, range.startIso, range.endIso).catch(() => null);
-          if (!data) return;
-          days.forEach((d, i) => {
-            if (CITY_BY_DAY[i] === code && data[d.iso]) merged[d.iso] = { ...data[d.iso], city: c.label };
-          });
-        }));
-      } else {
-        const names = [...new Set(days.map((d) => (d.overnight || '').trim()).filter(Boolean))];
-        await Promise.all(names.map(async (name) => {
-          let coords = geocodeCache.get(name);
-          if (coords === undefined) {
-            coords = await geocodeCity(name).catch(() => null);
-            geocodeCache.set(name, coords);
+      // Which keys came from the curated trip's built-in CITY_BY_DAY code
+      // (fast path — real coordinates, no geocoding) vs. an explicit
+      // override or a generic trip's lodging text (needs geocoding).
+      const keyIsBuiltIn = new Map();
+      const keys = [];
+      days.forEach((d, i) => {
+        const override = (d.city || '').trim();
+        const key = override || (meta.curated ? (CITY_BY_DAY[i] || '') : (d.overnight || '').trim());
+        if (!key) return;
+        keys.push(key);
+        if (!keyIsBuiltIn.has(key)) keyIsBuiltIn.set(key, !override && meta.curated);
+      });
+
+      await Promise.all([...new Set(keys)].map(async (key) => {
+        let coords, label;
+        const builtIn = keyIsBuiltIn.get(key) ? CITY_COORDS[key] : null;
+        if (builtIn) {
+          coords = builtIn; label = builtIn.label;
+        } else {
+          let cached = geocodeCache.get(key);
+          if (cached === undefined) {
+            cached = await geocodeCity(key).catch(() => null);
+            geocodeCache.set(key, cached);
           }
-          if (!coords) return;
-          const data = await fetchDailyForecast(coords.lat, coords.lon, range.startIso, range.endIso).catch(() => null);
-          if (!data) return;
-          days.forEach((d) => {
-            if ((d.overnight || '').trim() === name && data[d.iso]) merged[d.iso] = { ...data[d.iso], city: name };
-          });
-        }));
-      }
+          if (!cached) return;
+          coords = cached; label = key;
+        }
+        const data = await fetchDailyForecast(coords.lat, coords.lon, range.startIso, range.endIso).catch(() => null);
+        if (!data) return;
+        days.forEach((d, i) => {
+          if (locationKeyFor(d, i, meta.curated) === key && data[d.iso]) merged[d.iso] = { ...data[d.iso], city: label };
+        });
+      }));
 
       if (!cancelled) { setForecast(merged); setLoading(false); }
     })();
 
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `days` itself is intentionally excluded: only its span/city composition (captured by these primitives) should trigger a refetch, not every re-render
-  }, [meta.id, meta.curated, startIso, endIso]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `days` itself is intentionally excluded: citySignature (+ the date span) already captures everything that should trigger a refetch
+  }, [meta.id, meta.curated, startIso, endIso, citySignature]);
 
   return { forecast, loading };
 }

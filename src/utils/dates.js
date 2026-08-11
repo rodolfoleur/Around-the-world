@@ -53,6 +53,7 @@ export function emptyDayForIso(iso) {
     transit: [],
     parts: {},
     overnight: '',
+    city: '',
   };
 }
 

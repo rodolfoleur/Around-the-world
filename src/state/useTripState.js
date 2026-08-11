@@ -198,15 +198,25 @@ export function useTripState(meta, onUpdateTrip) {
     state.bkLeftLabel, state.bkLeftValue, state.bkLeftSub, state.bkRightLabel, state.bkRightValue, state.bkRightSub,
     state.bkNote, bookings, onUpdateTrip, patch]);
 
-  /** Changes which city/place a given day is spending the night in — plans change. */
-  const updateOvernight = useCallback((dayIndex, overnight) => {
-    const nextDays = days.map((d, i) => (i === dayIndex ? { ...d, overnight } : d));
+  /** Patches one field on one day within the trip's days array. */
+  const updateDayField = useCallback((dayIndex, field, value) => {
+    const nextDays = days.map((d, i) => (i === dayIndex ? { ...d, [field]: value } : d));
     onUpdateTrip({ days: nextDays });
   }, [days, onUpdateTrip]);
 
+  /** Changes what's written on the lodging line — the specific place, e.g. a hotel name. */
+  const updateOvernight = useCallback((dayIndex, overnight) => updateDayField(dayIndex, 'overnight', overnight), [updateDayField]);
+
+  /**
+   * Changes which city a day is in — plans change (e.g. an extra night in
+   * Windsor instead of London). Overrides the curated trip's default city
+   * for that day; weather then looks this up instead of the built-in one.
+   */
+  const updateDayCity = useCallback((dayIndex, city) => updateDayField(dayIndex, 'city', city), [updateDayField]);
+
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
-    addExpense, addActivity, addBooking, updateOvernight,
+    addExpense, addActivity, addBooking, updateOvernight, updateDayCity,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, fmt,
   };
 }

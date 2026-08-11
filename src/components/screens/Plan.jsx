@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { TERRA } from '../../data/trip.js';
+import { TERRA, CITY_BY_DAY, CITY_COORDS } from '../../data/trip.js';
 import { getDayParts } from '../../utils/dayParts.js';
 import { transitIcon } from '../../components/icons.jsx';
 import { useTripWeather } from '../../state/useTripWeather.js';
 import { weatherIcon } from '../../lib/weather.js';
+
+const KNOWN_CITIES = Object.values(CITY_COORDS).map((c) => c.label);
 
 function tagColor(tag) {
   return tag === 'Empty' || tag === 'Open'
@@ -11,30 +13,37 @@ function tagColor(tag) {
     : { bg: 'var(--wash)', fg: 'var(--muted)' };
 }
 
-/** The "spending the night in…" row — click to change it when plans change. */
-function OvernightRow({ overnight, dayIndex, onSave }) {
+/** One click-to-edit row (City, Lodging) — plans change, so nothing here is fixed. */
+function EditableRow({ label, value, placeholder, dayIndex, onSave, options, emptyLabel }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(overnight || '');
+  const [draft, setDraft] = useState(value || '');
+  const listId = 'row-suggestions-' + label.toLowerCase();
 
-  useEffect(() => { setEditing(false); setDraft(overnight || ''); }, [dayIndex, overnight]);
+  useEffect(() => { setEditing(false); setDraft(value || ''); }, [dayIndex, value]);
 
   if (editing) {
     const commit = () => { onSave(draft.trim()); setEditing(false); };
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '6px 0 14px 52px', padding: '11px 13px', borderRadius: 12, background: 'var(--wash)' }}>
-        <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>Overnight</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 0 9px 52px', padding: '11px 13px', borderRadius: 12, background: 'var(--wash)' }}>
+        <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>{label}</span>
         <input
           autoFocus
           type="text"
-          placeholder="e.g. Windsor"
+          list={options ? listId : undefined}
+          placeholder={placeholder}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') commit();
-            if (e.key === 'Escape') { setDraft(overnight || ''); setEditing(false); }
+            if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); }
           }}
           style={{ flex: 1, fontSize: 13, fontWeight: 500, textAlign: 'right', border: 0, background: 'none', padding: 0 }}
         />
+        {options && (
+          <datalist id={listId}>
+            {options.map((o) => <option key={o} value={o} />)}
+          </datalist>
+        )}
         <button
           type="button"
           onClick={commit}
@@ -45,14 +54,14 @@ function OvernightRow({ overnight, dayIndex, onSave }) {
     );
   }
 
-  if (!overnight) {
+  if (!value) {
     return (
       <button
         type="button"
         className="dash-btn"
         style={{ marginLeft: 52, width: 'calc(100% - 52px)', boxSizing: 'border-box', padding: 11, marginBottom: 9 }}
         onClick={() => setEditing(true)}
-      >+ Set overnight stay</button>
+      >+ Set {emptyLabel || label.toLowerCase()}</button>
     );
   }
 
@@ -61,12 +70,12 @@ function OvernightRow({ overnight, dayIndex, onSave }) {
       type="button"
       onClick={() => setEditing(true)}
       style={{
-        display: 'flex', alignItems: 'center', gap: 9, width: 'calc(100% - 52px)', margin: '6px 0 14px 52px',
+        display: 'flex', alignItems: 'center', gap: 9, width: 'calc(100% - 52px)', margin: '0 0 9px 52px',
         padding: '11px 13px', borderRadius: 12, background: 'var(--wash)', border: 0, cursor: 'pointer', fontFamily: 'inherit', boxSizing: 'border-box',
       }}
     >
-      <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>Overnight</span>
-      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{overnight}</span>
+      <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>{label}</span>
+      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{value}</span>
     </button>
   );
 }
@@ -79,7 +88,7 @@ function dayHasContent(d, extra) {
 }
 
 export default function Plan({ trip }) {
-  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight } = trip;
+  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight, updateDayCity } = trip;
   const railRef = useRef(null);
   const lastDay = useRef(null);
 
@@ -94,6 +103,7 @@ export default function Plan({ trip }) {
   const parts = getDayParts(day, dayExtra);
   const { forecast } = useTripWeather(meta, days);
   const todayWx = forecast[day.iso];
+  const effectiveCity = day.city || (meta.curated ? (CITY_COORDS[CITY_BY_DAY[state.day]]?.label || '') : '');
 
   return (
     <div className="pad-top">
@@ -223,9 +233,21 @@ export default function Plan({ trip }) {
           </div>
         ))}
 
-        <OvernightRow
-          overnight={day.overnight}
+        <EditableRow
+          label="City"
+          value={effectiveCity}
+          placeholder="e.g. Windsor"
           dayIndex={state.day}
+          options={KNOWN_CITIES}
+          emptyLabel="which city"
+          onSave={(text) => updateDayCity(state.day, text)}
+        />
+        <EditableRow
+          label="Lodging"
+          value={day.overnight}
+          placeholder="e.g. Windsor Castle Hotel"
+          dayIndex={state.day}
+          emptyLabel="overnight stay"
           onSave={(text) => updateOvernight(state.day, text)}
         />
 
