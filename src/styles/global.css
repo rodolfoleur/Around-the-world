@@ -337,6 +337,23 @@ h1, h2, h3 { font-family: var(--font-sans); margin: 0; letter-spacing: -0.03em; 
    which would out-specificity the media query and show year-round). */
 .weather-wide-chip, .weather-wide-header { display: none; }
 
+/* ---------- calendar ---------- */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { text-align: center; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-3); padding-bottom: 4px; }
+.cal-cell {
+  border-radius: 10px; padding: 6px 6px 7px; min-height: 46px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: flex-start; text-align: left;
+  border: 1px solid var(--line); background: #fff; font-family: inherit; cursor: default;
+}
+.cal-cell.blank { border: 0; background: none; }
+.cal-cell.muted { background: var(--wash); border-color: var(--wash); color: var(--muted-3); }
+.cal-cell.has-day { cursor: pointer; }
+.cal-cell.has-day:hover { border-color: var(--terra); }
+.cal-daynum { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.cal-glyph { font-size: 10px; }
+.cal-dot { width: 5px; height: 5px; border-radius: 99px; margin-top: 5px; }
+.weather-wide-cal { display: none; }
+
 /* ---------- sheets ---------- */
 .sheet-scrim {
   position: absolute;
@@ -417,6 +434,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .weather-wide-chip { display: block; }
   .weather-wide-header { display: flex; }
   .day-chip .dot.has-weather-wide { display: none; }
+
+  .cal-cell { min-height: 92px; padding: 8px 9px 9px; }
+  .cal-daynum { font-size: 12.5px; }
+  .cal-dot { display: none; }
+  .weather-wide-cal { display: block; margin-top: 4px; }
+  .cal-city { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+  .cal-summary { font-size: 10px; color: var(--muted); line-height: 1.35; margin-bottom: 3px; }
+  .cal-wx { font-size: 10px; color: var(--muted-2); }
 
   /* Center the sheet as a modal instead of a full-width bottom drawer.
      Placed after the base .sheet-panel rule (above) so it isn't clobbered

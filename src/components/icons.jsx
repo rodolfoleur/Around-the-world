@@ -103,8 +103,23 @@ export function TicketIcon(props) {
   );
 }
 
+export function CalendarIcon(props) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" {...props}>
+      <rect x="2.5" y="4" width="15" height="13.5" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2.5 8h15" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6.5 2.3v3.2M13.5 2.3v3.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="7" cy="11.5" r="1" fill="currentColor" />
+      <circle cx="10" cy="11.5" r="1" fill="currentColor" />
+      <circle cx="13" cy="11.5" r="1" fill="currentColor" />
+      <circle cx="7" cy="14.5" r="1" fill="currentColor" />
+      <circle cx="10" cy="14.5" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 export const PAY_ICONS = { Cash: CashIcon, Debit: DebitIcon, Credit: CreditIcon };
-export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon };
+export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon, calendar: CalendarIcon };
 
 export function SearchIcon(props) {
   return (
