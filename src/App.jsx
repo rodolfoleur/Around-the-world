@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AuthGate from './components/AuthGate.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { useTripsStore } from './state/useTripsStore.js';
 import TripsHome from './components/screens/TripsHome.jsx';
 import TripView from './components/TripView.jsx';
@@ -26,12 +27,14 @@ function HouseholdApp({ auth }) {
 
   if (meta) {
     return (
-      <TripView
-        key={meta.id}
-        meta={meta}
-        onBack={() => setActiveTripId(null)}
-        onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
-      />
+      <ErrorBoundary key={meta.id} onBack={() => setActiveTripId(null)} backLabel="Back to trips">
+        <TripView
+          key={meta.id}
+          meta={meta}
+          onBack={() => setActiveTripId(null)}
+          onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
+        />
+      </ErrorBoundary>
     );
   }
 
@@ -51,10 +54,12 @@ function HouseholdApp({ auth }) {
 
 export default function App() {
   return (
-    <div className="app-page">
-      <div className="app-frame">
-        <AuthGate>{(auth) => <HouseholdApp auth={auth} />}</AuthGate>
+    <ErrorBoundary>
+      <div className="app-page">
+        <div className="app-frame">
+          <AuthGate>{(auth) => <HouseholdApp auth={auth} />}</AuthGate>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
