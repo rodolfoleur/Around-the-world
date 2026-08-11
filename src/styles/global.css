@@ -103,12 +103,6 @@ a:hover { color: var(--terra-dark); }
     margin-left: auto;
     margin-right: auto;
   }
-  .sheet-panel {
-    max-width: 640px;
-    left: 50%;
-    right: auto;
-    margin-left: -320px;
-  }
   /* the sidebar's own "All trips" link replaces this inline one */
   .mobile-only-back { display: none; }
 }
@@ -413,4 +407,21 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .costs-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
   .trip-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
   .journey-columns { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+
+  /* Center the sheet as a modal instead of a full-width bottom drawer.
+     Placed after the base .sheet-panel rule (above) so it isn't clobbered
+     by it in the cascade — an earlier copy of this override, positioned
+     before the base rule, was silently overridden by it regardless of
+     viewport width. */
+  .sheet-panel {
+    max-width: 640px;
+    left: 50%;
+    right: auto;
+    margin-left: -320px;
+    bottom: auto;
+    top: 50%;
+    margin-top: -44vh;
+    border-radius: 26px;
+    max-height: 88vh;
+  }
 }
