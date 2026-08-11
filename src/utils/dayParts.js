@@ -10,7 +10,7 @@ export function getDayParts(day, extraForDay = {}) {
   SLOTS.forEach(([key, short, label]) => {
     const items = [];
     if (day.parts[key]) items.push({ text: day.parts[key] });
-    (extraForDay[key] || []).forEach((e) => items.push({ text: e.text, extra: true, kind: e.kind, time: e.time }));
+    (extraForDay[key] || []).forEach((e) => items.push({ text: e.text, extra: true, kind: e.kind, time: e.time, location: e.location }));
     if (items.length) out.push({ key, short, label, items });
   });
   return out;

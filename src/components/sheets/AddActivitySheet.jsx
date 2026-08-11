@@ -103,18 +103,16 @@ export default function AddActivitySheet({ trip }) {
         </div>
 
         <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Location — optional</div>
-        {!place && (
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', marginBottom: 16 }}>
-            <span style={{ width: 16, height: 16, flex: 'none', color: 'var(--muted-3)' }}><SearchIcon /></span>
-            <input
-              type="text"
-              placeholder="Add a place name or address"
-              value={state.stopQueryText || ''}
-              onChange={(e) => patch({ stopQueryText: e.target.value })}
-              style={{ flex: 1, fontSize: 13.5, border: 0, background: 'none', padding: 0, width: '100%' }}
-            />
-          </div>
-        )}
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', marginBottom: place ? 10 : 16 }}>
+          <span style={{ width: 16, height: 16, flex: 'none', color: 'var(--muted-3)' }}><SearchIcon /></span>
+          <input
+            type="text"
+            placeholder="Add a place name or address"
+            value={state.stopQueryText}
+            onChange={(e) => patch({ stopQueryText: e.target.value, hasLocation: false })}
+            style={{ flex: 1, fontSize: 13.5, border: 0, background: 'none', padding: 0, width: '100%' }}
+          />
+        </div>
         {place && !state.hasLocation && (
           <button
             type="button"
@@ -123,29 +121,28 @@ export default function AddActivitySheet({ trip }) {
             onClick={() => patch({ hasLocation: true })}
           >
             <span style={{ width: 16, height: 16, flex: 'none', color: 'var(--muted-3)' }}><SearchIcon /></span>
-            <span style={{ flex: 1, textAlign: 'left', fontSize: 13.5, color: 'var(--muted)' }}>Add a place — near {place.hint.replace('near ', '')}</span>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 13.5, color: 'var(--muted)' }}>Or pick a suggestion — near {place.hint.replace('near ', '')}</span>
           </button>
         )}
         {place && state.hasLocation && (
           <div style={{ marginBottom: 16, animation: 'fadeIn .22s ease' }}>
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', marginBottom: 10 }}>
-              <span style={{ width: 16, height: 16, flex: 'none', color: 'var(--muted-3)' }}><SearchIcon /></span>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{place.query}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>Suggestions near {place.hint.replace('near ', '')}</span>
               <button
                 type="button"
                 onClick={() => patch({ hasLocation: false })}
                 className="mono"
                 style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--terra)' }}
-              >Remove</button>
+              >Hide</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 12 }}>
               {place.list.map((s, i) => {
-                const on = state.stopPick === i;
+                const on = state.stopPick === i && state.stopQueryText === s.name;
                 return (
                   <button
                     key={s.name}
                     type="button"
-                    onClick={() => patch({ stopPick: i })}
+                    onClick={() => patch({ stopPick: i, stopQueryText: s.name })}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 11, width: '100%', padding: '11px 13px', borderRadius: 13,
                       cursor: 'pointer', fontFamily: 'inherit', boxSizing: 'border-box', textAlign: 'left',

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  CARDS, FX, CITY_BY_DAY, CITY_CURRENCY,
+  CARDS, FX, CITY_BY_DAY, CITY_CURRENCY, PLACES,
   STOP_KIND_TO_CATEGORY, fmt,
 } from '../data/trip.js';
 
@@ -16,6 +16,8 @@ import {
  * back to Supabase, already bound to this trip's id by the caller.
  */
 const KIND_TO_GROUP = { Flight: 'Flights', Stay: 'Stays', Ground: 'Ground', Car: 'Car' };
+const EMPTY_ARR = [];
+const EMPTY_OBJ = {};
 
 export function useTripState(meta, onUpdateTrip) {
   const [state, setState] = useState(() => ({
@@ -44,6 +46,7 @@ export function useTripState(meta, onUpdateTrip) {
     stopEstimate: '',
     stopPick: 0,
     hasLocation: false,
+    stopQueryText: '',
 
     // add-a-booking sheet
     bkKind: 'Flight',
@@ -73,7 +76,7 @@ export function useTripState(meta, onUpdateTrip) {
     sheet: 'expense', expDesc: '', expAmount: '', payMethod: 'Credit',
   }), [patch]);
   const openAddStopSheet = useCallback(() => patch({
-    sheet: 'addstop', activityName: '', hasLocation: false, stopEstimate: '',
+    sheet: 'addstop', activityName: '', hasLocation: false, stopEstimate: '', stopQueryText: '', stopPick: 0,
   }), [patch]);
   const openAddBookingSheet = useCallback(() => patch({
     sheet: 'addbooking', bkKind: 'Flight', bkTitle: '', bkSub: '', bkPrice: '', bkStatus: 'Confirmed',
@@ -82,10 +85,21 @@ export function useTripState(meta, onUpdateTrip) {
   }), [patch]);
 
   // ---------- derived data (all sourced from the live `meta`) ----------
-  const days = meta.days;
-  const bookings = meta.bookings;
-  const allCosts = useMemo(() => [...meta.costs, ...meta.extraCosts], [meta.costs, meta.extraCosts]);
-  const rows = useMemo(() => allCosts.map((c) => ({ ...c, gbpN: c.amount / FX[c.cur] })), [allCosts]);
+  // Defensive fallbacks throughout: `meta` should always come from rowToTrip
+  // (which already defaults every array/object field), but this hook is the
+  // one place everything funnels through, so a gap anywhere upstream — a
+  // stale cache, a hand-edited row, a future schema change — degrades to
+  // "nothing there yet" instead of taking the whole screen down. Falling
+  // back to the same module-level empty array/object (rather than a fresh
+  // `[]`/`{}` literal each render) keeps their identity stable so memoized
+  // values below don't recompute on every render when a field is missing.
+  const days = meta.days || EMPTY_ARR;
+  const bookings = meta.bookings || EMPTY_ARR;
+  const costs = meta.costs || EMPTY_ARR;
+  const extraCosts = meta.extraCosts || EMPTY_ARR;
+  const extraActivities = meta.extraActivities || EMPTY_OBJ;
+  const allCosts = useMemo(() => [...costs, ...extraCosts], [costs, extraCosts]);
+  const rows = useMemo(() => allCosts.map((c) => ({ ...c, gbpN: c.amount / (FX[c.cur] || 1) })), [allCosts]);
   const total = useMemo(() => rows.reduce((a, c) => a + c.gbpN, 0), [rows]);
   const catMap = useMemo(() => {
     const m = {};
@@ -93,8 +107,9 @@ export function useTripState(meta, onUpdateTrip) {
     return m;
   }, [rows]);
 
-  const day = days[Math.min(state.day, days.length - 1)];
-  const dayExtra = meta.extraActivities[state.day] || {};
+  const EMPTY_DAY = { short: '', label: '', tag: 'Empty', transit: [], parts: {}, overnight: '' };
+  const day = days.length ? days[Math.min(state.day, days.length - 1)] : EMPTY_DAY;
+  const dayExtra = extraActivities[state.day] || {};
 
   const addExpense = useCallback(() => {
     const amount = parseFloat(state.expAmount);
@@ -109,29 +124,35 @@ export function useTripState(meta, onUpdateTrip) {
         ? (CARDS.find((c) => c.id === state.card)?.name || 'Credit')
         : state.payMethod,
     };
-    onUpdateTrip({ extraCosts: [...meta.extraCosts, entry] });
+    onUpdateTrip({ extraCosts: [...extraCosts, entry] });
     patch({ sheet: null });
     return true;
-  }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.payMethod, state.card, meta.extraCosts, onUpdateTrip, patch]);
+  }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.payMethod, state.card, extraCosts, onUpdateTrip, patch]);
 
   const addActivity = useCallback(() => {
     if (!state.activityName.trim()) return false;
     const slotKey = state.stopSlot.toLowerCase();
+    const typedLocation = state.stopQueryText.trim();
+    const pickedPreset = meta.curated && state.hasLocation
+      ? PLACES[CITY_BY_DAY[state.day]]?.list?.[state.stopPick]
+      : null;
+    const location = typedLocation || pickedPreset?.name || '';
     const entry = {
       id: 'user-' + Date.now(),
       text: state.activityName.trim(),
       kind: state.stopKind,
       time: state.stopStart,
+      ...(location ? { location } : {}),
     };
-    const dayBucket = { ...(meta.extraActivities[state.day] || {}) };
+    const dayBucket = { ...(extraActivities[state.day] || {}) };
     dayBucket[slotKey] = [...(dayBucket[slotKey] || []), entry];
-    const nextExtraActivities = { ...meta.extraActivities, [state.day]: dayBucket };
+    const nextExtraActivities = { ...extraActivities, [state.day]: dayBucket };
 
-    let nextExtraCosts = meta.extraCosts;
+    let nextExtraCosts = extraCosts;
     const estimate = parseFloat(state.stopEstimate);
     if (state.stopBudget && !Number.isNaN(estimate) && estimate > 0) {
       const cur = meta.curated ? (CITY_CURRENCY[CITY_BY_DAY[state.day]] || 'GBP') : (meta.currency || 'GBP');
-      nextExtraCosts = [...meta.extraCosts, {
+      nextExtraCosts = [...extraCosts, {
         id: 'user-' + Date.now() + '-cost',
         label: entry.text,
         cat: STOP_KIND_TO_CATEGORY[state.stopKind] || 'Other',
@@ -143,7 +164,8 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ extraActivities: nextExtraActivities, extraCosts: nextExtraCosts });
     patch({ sheet: null });
     return true;
-  }, [state.activityName, state.stopSlot, state.stopKind, state.stopStart, state.stopBudget, state.stopEstimate, state.day, meta.extraActivities, meta.extraCosts, meta.curated, meta.currency, onUpdateTrip, patch]);
+  }, [state.activityName, state.stopSlot, state.stopKind, state.stopStart, state.stopBudget, state.stopEstimate,
+    state.stopQueryText, state.hasLocation, state.stopPick, state.day, extraActivities, extraCosts, meta.curated, meta.currency, onUpdateTrip, patch]);
 
   const addBooking = useCallback(() => {
     if (!state.bkTitle.trim()) return false;
@@ -169,16 +191,22 @@ export function useTripState(meta, onUpdateTrip) {
         note: state.bkNote.trim() || undefined,
       },
     };
-    onUpdateTrip({ bookings: [...meta.bookings, entry] });
+    onUpdateTrip({ bookings: [...bookings, entry] });
     patch({ sheet: null });
     return true;
   }, [state.bkKind, state.bkTitle, state.bkSub, state.bkPrice, state.bkStatus, state.bkRef, state.bkWho,
     state.bkLeftLabel, state.bkLeftValue, state.bkLeftSub, state.bkRightLabel, state.bkRightValue, state.bkRightSub,
-    state.bkNote, meta.bookings, onUpdateTrip, patch]);
+    state.bkNote, bookings, onUpdateTrip, patch]);
+
+  /** Changes which city/place a given day is spending the night in — plans change. */
+  const updateOvernight = useCallback((dayIndex, overnight) => {
+    const nextDays = days.map((d, i) => (i === dayIndex ? { ...d, overnight } : d));
+    onUpdateTrip({ days: nextDays });
+  }, [days, onUpdateTrip]);
 
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
-    addExpense, addActivity, addBooking,
+    addExpense, addActivity, addBooking, updateOvernight,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, fmt,
   };
 }

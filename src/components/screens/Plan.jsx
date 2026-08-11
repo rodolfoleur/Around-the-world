@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TERRA } from '../../data/trip.js';
 import { getDayParts } from '../../utils/dayParts.js';
 import { transitIcon } from '../../components/icons.jsx';
@@ -9,6 +9,66 @@ function tagColor(tag) {
     : { bg: 'var(--wash)', fg: 'var(--muted)' };
 }
 
+/** The "spending the night in…" row — click to change it when plans change. */
+function OvernightRow({ overnight, dayIndex, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(overnight || '');
+
+  useEffect(() => { setEditing(false); setDraft(overnight || ''); }, [dayIndex, overnight]);
+
+  if (editing) {
+    const commit = () => { onSave(draft.trim()); setEditing(false); };
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '6px 0 14px 52px', padding: '11px 13px', borderRadius: 12, background: 'var(--wash)' }}>
+        <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>Overnight</span>
+        <input
+          autoFocus
+          type="text"
+          placeholder="e.g. Windsor"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') { setDraft(overnight || ''); setEditing(false); }
+          }}
+          style={{ flex: 1, fontSize: 13, fontWeight: 500, textAlign: 'right', border: 0, background: 'none', padding: 0 }}
+        />
+        <button
+          type="button"
+          onClick={commit}
+          className="mono"
+          style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--terra)', flex: 'none' }}
+        >Save</button>
+      </div>
+    );
+  }
+
+  if (!overnight) {
+    return (
+      <button
+        type="button"
+        className="dash-btn"
+        style={{ marginLeft: 52, width: 'calc(100% - 52px)', boxSizing: 'border-box', padding: 11, marginBottom: 9 }}
+        onClick={() => setEditing(true)}
+      >+ Set overnight stay</button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9, width: 'calc(100% - 52px)', margin: '6px 0 14px 52px',
+        padding: '11px 13px', borderRadius: 12, background: 'var(--wash)', border: 0, cursor: 'pointer', fontFamily: 'inherit', boxSizing: 'border-box',
+      }}
+    >
+      <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>Overnight</span>
+      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{overnight}</span>
+    </button>
+  );
+}
+
 function dayHasContent(d, extra) {
   if (d.transit.length) return true;
   if (Object.keys(d.parts).length) return true;
@@ -17,7 +77,7 @@ function dayHasContent(d, extra) {
 }
 
 export default function Plan({ trip }) {
-  const { state, patch, meta, days, day, dayExtra, openAddStopSheet } = trip;
+  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight } = trip;
   const railRef = useRef(null);
   const lastDay = useRef(null);
 
@@ -128,6 +188,9 @@ export default function Plan({ trip }) {
               {p.items.map((it, i) => (
                 <div key={i} className="card-btn" style={{ padding: '13px 14px', cursor: 'default' }}>
                   <span style={{ display: 'block', fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink)' }}>{it.text}</span>
+                  {it.location && (
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>{it.location}</span>
+                  )}
                   {it.extra && (
                     <span className="mono" style={{ display: 'block', fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--terra)', marginTop: 5 }}>
                       + Added{it.time ? ` · ${it.time}` : ''}
@@ -139,12 +202,11 @@ export default function Plan({ trip }) {
           </div>
         ))}
 
-        {day.overnight && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '6px 0 14px 52px', padding: '11px 13px', borderRadius: 12, background: 'var(--wash)' }}>
-            <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', flex: 'none' }}>Overnight</span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{day.overnight}</span>
-          </div>
-        )}
+        <OvernightRow
+          overnight={day.overnight}
+          dayIndex={state.day}
+          onSave={(text) => updateOvernight(state.day, text)}
+        />
 
         <button
           type="button"

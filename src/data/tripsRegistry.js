@@ -25,6 +25,8 @@ export function babymoonTrip() {
     days: DAYS,
     bookings: BOOKINGS,
     costs: COSTS,
+    extraCosts: [],
+    extraActivities: {},
   };
 }
 
@@ -73,5 +75,7 @@ export function createEmptyTrip({ title, startDate, endDate, travelersText, rout
     days,
     bookings: [],
     costs: [],
+    extraCosts: [],
+    extraActivities: {},
   };
 }
