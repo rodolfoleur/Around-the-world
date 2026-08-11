@@ -330,6 +330,13 @@ h1, h2, h3 { font-family: var(--font-sans); margin: 0; letter-spacing: -0.03em; 
 .day-chip .num { display: block; font-family: var(--font-mono); font-size: 16px; }
 .day-chip .dot { display: block; width: 5px; height: 5px; border-radius: 99px; margin: 5px auto 0; background: transparent; }
 
+/* Weather: a "large canvas" feature only — iPad, laptop, or a phone
+   turned sideways, per the breakpoint already used for the sidebar
+   shell. Hidden by default so mobile-portrait keeps the plain dot.
+   display is controlled entirely by these classes (not inline style,
+   which would out-specificity the media query and show year-round). */
+.weather-wide-chip, .weather-wide-header { display: none; }
+
 /* ---------- sheets ---------- */
 .sheet-scrim {
   position: absolute;
@@ -407,6 +414,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .costs-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
   .trip-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
   .journey-columns { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+  .weather-wide-chip { display: block; }
+  .weather-wide-header { display: flex; }
+  .day-chip .dot.has-weather-wide { display: none; }
 
   /* Center the sheet as a modal instead of a full-width bottom drawer.
      Placed after the base .sheet-panel rule (above) so it isn't clobbered

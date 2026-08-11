@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { TERRA } from '../../data/trip.js';
 import { getDayParts } from '../../utils/dayParts.js';
 import { transitIcon } from '../../components/icons.jsx';
+import { useTripWeather } from '../../state/useTripWeather.js';
+import { weatherIcon } from '../../lib/weather.js';
 
 function tagColor(tag) {
   return tag === 'Empty' || tag === 'Open'
@@ -90,17 +92,26 @@ export default function Plan({ trip }) {
 
   const tc = tagColor(day.tag);
   const parts = getDayParts(day, dayExtra);
+  const { forecast } = useTripWeather(meta, days);
+  const todayWx = forecast[day.iso];
 
   return (
     <div className="pad-top">
       <div className="pad" style={{ paddingBottom: 0 }}>
         <h2 className="h2" style={{ marginBottom: 4 }}>Itinerary</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <span className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)' }}>{day.label}</span>
           <span
             className="mono"
             style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, background: tc.bg, color: tc.fg }}
           >{day.tag}</span>
+          {todayWx && (
+            <span className="weather-wide-header mono" style={{ fontSize: 11.5, color: 'var(--muted)', alignItems: 'center', gap: 5 }}>
+              <span>{weatherIcon(todayWx.code).icon}</span>
+              <span>{Math.round(todayWx.max)}° / {Math.round(todayWx.min)}°</span>
+              <span style={{ color: 'var(--muted-3)' }}>{todayWx.city}</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -108,6 +119,7 @@ export default function Plan({ trip }) {
         {days.map((d, i) => {
           const active = state.day === i;
           const hasContent = dayHasContent(d, meta.extraActivities[i]);
+          const wx = forecast[d.iso];
           return (
             <button
               key={i}
@@ -117,8 +129,17 @@ export default function Plan({ trip }) {
             >
               <span className="dow">{d.dow}</span>
               <span className="num">{d.num}</span>
+              {/* dot is the always-visible (mobile) indicator; the weather
+                  chip replaces it only at the wide breakpoint, via CSS —
+                  both render so mobile never loses the dot on days that
+                  happen to have a forecast. */}
+              {wx && (
+                <span className="weather-wide-chip" style={{ fontSize: 10, marginTop: 3 }}>
+                  {weatherIcon(wx.code).icon} {Math.round(wx.max)}°
+                </span>
+              )}
               <span
-                className="dot"
+                className={'dot' + (wx ? ' has-weather-wide' : '')}
                 style={{ width: 5, height: 5, margin: '5px auto 0', background: active ? 'var(--bone)' : (d.transit.length ? TERRA : (hasContent ? '#ddd6c8' : 'transparent')) }}
               />
             </button>

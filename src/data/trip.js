@@ -394,6 +394,13 @@ export const STOP_KINDS = ['Food', 'Sight', 'Golf', 'Spa', 'Transit', 'Other'];
 export const STOP_KIND_TO_CATEGORY = { Food: 'Meals', Sight: 'Activities', Golf: 'Golf', Spa: 'Health', Transit: 'Ground Transport', Other: 'Other' };
 export const DURATIONS = ['1h', '2h', '3h', 'Half day'];
 export const CITY_CURRENCY = { LON: 'GBP', AUT: 'EUR', MEX: 'MXN', CAB: 'USD' };
+// Real coordinates (unlike AIRPORTS' schematic x/y) for weather lookups.
+export const CITY_COORDS = {
+  LON: { lat: 51.5074, lon: -0.1278, label: 'London' },
+  AUT: { lat: 47.4467, lon: 12.3927, label: 'Kitzbühel' },
+  MEX: { lat: 19.4326, lon: -99.1332, label: 'Mexico City' },
+  CAB: { lat: 22.8905, lon: -109.9167, label: 'Los Cabos' },
+};
 export const SLOTS = [
   ['morning', 'AM', 'Morning'],
   ['afternoon', 'PM', 'Afternoon'],
