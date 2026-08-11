@@ -47,6 +47,11 @@ const PATCH_KEY_MAP = {
   title: 'title',
   route: 'route',
   currency: 'currency',
+  bookings: 'bookings',
+  days: 'days',
+  startDate: 'start_date',
+  endDate: 'end_date',
+  travelers: 'travelers',
 };
 
 /** Converts a partial camelCase patch (only the fields we actually mutate) into row column names. */

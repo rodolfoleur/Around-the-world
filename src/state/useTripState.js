@@ -15,6 +15,8 @@ import {
  * `onUpdateTrip(patch)` persists a partial change (extraCosts/extraActivities)
  * back to Supabase, already bound to this trip's id by the caller.
  */
+const KIND_TO_GROUP = { Flight: 'Flights', Stay: 'Stays', Ground: 'Ground', Car: 'Car' };
+
 export function useTripState(meta, onUpdateTrip) {
   const [state, setState] = useState(() => ({
     tab: 'home',
@@ -42,6 +44,22 @@ export function useTripState(meta, onUpdateTrip) {
     stopEstimate: '',
     stopPick: 0,
     hasLocation: false,
+
+    // add-a-booking sheet
+    bkKind: 'Flight',
+    bkTitle: '',
+    bkSub: '',
+    bkPrice: '',
+    bkStatus: 'Confirmed',
+    bkRef: '',
+    bkWho: '',
+    bkLeftLabel: '',
+    bkLeftValue: '',
+    bkLeftSub: '',
+    bkRightLabel: '',
+    bkRightValue: '',
+    bkRightSub: '',
+    bkNote: '',
   }));
 
   const patch = useCallback((next) => {
@@ -56,6 +74,11 @@ export function useTripState(meta, onUpdateTrip) {
   }), [patch]);
   const openAddStopSheet = useCallback(() => patch({
     sheet: 'addstop', activityName: '', hasLocation: false, stopEstimate: '',
+  }), [patch]);
+  const openAddBookingSheet = useCallback(() => patch({
+    sheet: 'addbooking', bkKind: 'Flight', bkTitle: '', bkSub: '', bkPrice: '', bkStatus: 'Confirmed',
+    bkRef: '', bkWho: '', bkLeftLabel: 'Depart', bkLeftValue: '', bkLeftSub: '',
+    bkRightLabel: 'Arrive', bkRightValue: '', bkRightSub: '', bkNote: '',
   }), [patch]);
 
   // ---------- derived data (all sourced from the live `meta`) ----------
@@ -122,9 +145,40 @@ export function useTripState(meta, onUpdateTrip) {
     return true;
   }, [state.activityName, state.stopSlot, state.stopKind, state.stopStart, state.stopBudget, state.stopEstimate, state.day, meta.extraActivities, meta.extraCosts, meta.curated, meta.currency, onUpdateTrip, patch]);
 
+  const addBooking = useCallback(() => {
+    if (!state.bkTitle.trim()) return false;
+    const hasRoute = state.bkLeftValue.trim() || state.bkRightValue.trim();
+    const rows = [];
+    if (state.bkRef.trim()) rows.push({ k: 'Confirmation', v: state.bkRef.trim() });
+    if (state.bkWho.trim()) rows.push({ k: 'Details', v: state.bkWho.trim() });
+    const entry = {
+      kind: state.bkKind,
+      group: KIND_TO_GROUP[state.bkKind] || state.bkKind,
+      status: state.bkStatus,
+      title: state.bkTitle.trim(),
+      sub: state.bkSub.trim(),
+      price: state.bkPrice.trim(),
+      ref: state.bkRef.trim(),
+      who: state.bkWho.trim(),
+      detail: {
+        ...(hasRoute ? {
+          leftLabel: state.bkLeftLabel.trim(), leftValue: state.bkLeftValue.trim(), leftSub: state.bkLeftSub.trim(),
+          rightLabel: state.bkRightLabel.trim(), rightValue: state.bkRightValue.trim(), rightSub: state.bkRightSub.trim(),
+        } : {}),
+        rows,
+        note: state.bkNote.trim() || undefined,
+      },
+    };
+    onUpdateTrip({ bookings: [...meta.bookings, entry] });
+    patch({ sheet: null });
+    return true;
+  }, [state.bkKind, state.bkTitle, state.bkSub, state.bkPrice, state.bkStatus, state.bkRef, state.bkWho,
+    state.bkLeftLabel, state.bkLeftValue, state.bkLeftSub, state.bkRightLabel, state.bkRightValue, state.bkRightSub,
+    state.bkNote, meta.bookings, onUpdateTrip, patch]);
+
   return {
-    meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet,
-    addExpense, addActivity,
+    meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
+    addExpense, addActivity, addBooking,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, fmt,
   };
 }

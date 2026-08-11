@@ -1,18 +1,30 @@
 const FILTERS = ['All', 'Flights', 'Stays', 'Ground', 'Car'];
 
 export default function Bookings({ trip }) {
-  const { state, patch, bookings, openBooking } = trip;
+  const { state, patch, meta, bookings, openBooking, openAddBookingSheet } = trip;
   const filtered = bookings.filter((b) => state.bFilter === 'All' || b.group === state.bFilter);
 
   return (
     <div className="pad" style={{ paddingTop: 20 }}>
-      <h2 className="h2" style={{ marginBottom: 4 }}>Bookings</h2>
-      <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)', marginBottom: 16 }}>Forwarded confirmations · auto-filed</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+        <h2 className="h2">Bookings</h2>
+        <button type="button" className="btn-primary" style={{ padding: '10px 14px', fontSize: 10.5, flex: 'none' }} onClick={openAddBookingSheet}>
+          + Add booking
+        </button>
+      </div>
+      <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)', marginBottom: 16 }}>
+        {meta.curated ? 'Forwarded confirmations · auto-filed' : 'Flight, stay, ground and car confirmations'}
+      </div>
 
       {bookings.length === 0 ? (
-        <div className="card" style={{ padding: '22px 18px', textAlign: 'center', color: 'var(--muted)' }}>
-          No bookings filed yet. Flight, stay and car confirmations will show up here.
-        </div>
+        <button
+          type="button"
+          className="dash-btn"
+          style={{ width: '100%', boxSizing: 'border-box', padding: '20px 16px', fontSize: 11.5 }}
+          onClick={openAddBookingSheet}
+        >
+          + File your first booking
+        </button>
       ) : (
         <>
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -45,11 +57,13 @@ export default function Bookings({ trip }) {
                     <span style={{ fontSize: 15.5, fontWeight: 600, lineHeight: 1.25 }}>{b.title}</span>
                     <span className="mono" style={{ fontSize: 11.5, color: 'var(--muted)', flex: 'none' }}>{b.price}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5, lineHeight: 1.4 }}>{b.sub}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 11 }}>
-                    <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink)', background: 'var(--wash)', padding: '4px 8px', borderRadius: 6 }}>{b.ref}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted-3)' }}>{b.who}</span>
-                  </div>
+                  {b.sub && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5, lineHeight: 1.4 }}>{b.sub}</div>}
+                  {(b.ref || b.who) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 11 }}>
+                      {b.ref && <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink)', background: 'var(--wash)', padding: '4px 8px', borderRadius: 6 }}>{b.ref}</span>}
+                      {b.who && <span style={{ fontSize: 11, color: 'var(--muted-3)' }}>{b.who}</span>}
+                    </div>
+                  )}
                 </button>
               );
             })}

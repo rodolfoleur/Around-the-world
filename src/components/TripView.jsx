@@ -8,6 +8,7 @@ import Bookings from './screens/Bookings.jsx';
 import ExpenseSheet from './sheets/ExpenseSheet.jsx';
 import AddActivitySheet from './sheets/AddActivitySheet.jsx';
 import BookingSheet from './sheets/BookingSheet.jsx';
+import AddBookingSheet from './sheets/AddBookingSheet.jsx';
 
 const TABS = [
   ['home', 'Trip'],
@@ -65,6 +66,7 @@ export default function TripView({ meta, onBack, onUpdateTrip }) {
             {state.sheet === 'expense' && <ExpenseSheet trip={trip} />}
             {state.sheet === 'addstop' && <AddActivitySheet trip={trip} />}
             {state.sheet === 'booking' && <BookingSheet trip={trip} />}
+            {state.sheet === 'addbooking' && <AddBookingSheet trip={trip} />}
           </div>
         </>
       )}
