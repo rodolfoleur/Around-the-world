@@ -25,7 +25,7 @@ const CARD_SWATCHES = [
  * `onUpdateTrip(patch)` persists a partial change (extraCosts/extraActivities)
  * back to Supabase, already bound to this trip's id by the caller.
  */
-const KIND_TO_GROUP = { Flight: 'Flights', Stay: 'Stays', Ground: 'Ground', Car: 'Car' };
+const KIND_TO_GROUP = { Flight: 'Flights', Stay: 'Stays', Ground: 'Ground', Car: 'Car', Event: 'Events' };
 const EMPTY_ARR = [];
 const EMPTY_OBJ = {};
 

@@ -1,4 +1,4 @@
-const FILTERS = ['All', 'Flights', 'Stays', 'Ground', 'Car'];
+const FILTERS = ['All', 'Flights', 'Stays', 'Ground', 'Car', 'Events'];
 
 export default function Bookings({ trip }) {
   const { state, patch, meta, bookings, openBooking, openAddBookingSheet } = trip;

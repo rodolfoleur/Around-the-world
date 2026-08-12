@@ -1,12 +1,20 @@
 import { useState } from 'react';
 
-const KINDS = ['Flight', 'Stay', 'Ground', 'Car'];
+const KINDS = ['Flight', 'Stay', 'Ground', 'Car', 'Event'];
 const STATUSES = ['Confirmed', 'Prepaid', 'Pending'];
 const ROUTE_LABELS = {
   Flight: ['Depart', 'Arrive'],
   Stay: ['Check-in', 'Check-out'],
   Ground: ['Pickup', 'Drop'],
   Car: ['Pickup', 'Return'],
+  Event: ['Venue', 'Starts'],
+};
+const ROUTE_SECTION_LABEL = {
+  Event: 'Venue & time — optional',
+};
+const DEFAULT_ROUTE_PLACEHOLDERS = ['LHR', 'MUC', '07:10 · T5', '10:05 · T1'];
+const ROUTE_PLACEHOLDERS = {
+  Event: ['Royal Albert Hall', '19:30', 'Door 4', 'Doors 18:45'],
 };
 
 export default function AddBookingSheet({ trip }) {
@@ -76,22 +84,22 @@ export default function AddBookingSheet({ trip }) {
 
       <div className="card" style={{ padding: '14px 16px', marginBottom: 18 }}>
         <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 12 }}>
-          Route — optional
+          {ROUTE_SECTION_LABEL[state.bkKind] || 'Route — optional'}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div>
             <label className="field-label" htmlFor="bk-left-value">{state.bkLeftLabel || 'From'}</label>
-            <input id="bk-left-value" type="text" placeholder="LHR" value={state.bkLeftValue} onChange={(e) => patch({ bkLeftValue: e.target.value })} />
+            <input id="bk-left-value" type="text" placeholder={(ROUTE_PLACEHOLDERS[state.bkKind] || DEFAULT_ROUTE_PLACEHOLDERS)[0]} value={state.bkLeftValue} onChange={(e) => patch({ bkLeftValue: e.target.value })} />
           </div>
           <div>
             <label className="field-label" htmlFor="bk-right-value">{state.bkRightLabel || 'To'}</label>
-            <input id="bk-right-value" type="text" placeholder="MUC" value={state.bkRightValue} onChange={(e) => patch({ bkRightValue: e.target.value })} />
+            <input id="bk-right-value" type="text" placeholder={(ROUTE_PLACEHOLDERS[state.bkKind] || DEFAULT_ROUTE_PLACEHOLDERS)[1]} value={state.bkRightValue} onChange={(e) => patch({ bkRightValue: e.target.value })} />
           </div>
           <div>
-            <input type="text" placeholder="07:10 · T5" value={state.bkLeftSub} onChange={(e) => patch({ bkLeftSub: e.target.value })} />
+            <input type="text" placeholder={(ROUTE_PLACEHOLDERS[state.bkKind] || DEFAULT_ROUTE_PLACEHOLDERS)[2]} value={state.bkLeftSub} onChange={(e) => patch({ bkLeftSub: e.target.value })} />
           </div>
           <div>
-            <input type="text" placeholder="10:05 · T1" value={state.bkRightSub} onChange={(e) => patch({ bkRightSub: e.target.value })} />
+            <input type="text" placeholder={(ROUTE_PLACEHOLDERS[state.bkKind] || DEFAULT_ROUTE_PLACEHOLDERS)[3]} value={state.bkRightSub} onChange={(e) => patch({ bkRightSub: e.target.value })} />
           </div>
         </div>
       </div>
