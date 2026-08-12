@@ -280,6 +280,10 @@ h1, h2, h3 { font-family: var(--font-sans); margin: 0; letter-spacing: -0.03em; 
     background: var(--wash);
     border-top: 0;
     border-right: 1px solid var(--line);
+    /* A landscape phone is wide enough to trigger this sidebar layout but
+       often too short to fit every tab — scroll instead of silently
+       clipping the last one or two off the bottom. */
+    overflow-y: auto;
   }
   .tab-btn { flex: none; width: 100%; padding: 10px 4px; border-radius: 13px; transition: background .15s ease; }
   .tab-btn:hover { background: rgba(28, 27, 25, 0.05); }
@@ -330,12 +334,13 @@ h1, h2, h3 { font-family: var(--font-sans); margin: 0; letter-spacing: -0.03em; 
 .day-chip .num { display: block; font-family: var(--font-mono); font-size: 16px; }
 .day-chip .dot { display: block; width: 5px; height: 5px; border-radius: 99px; margin: 5px auto 0; background: transparent; }
 
-/* Weather: a "large canvas" feature only — iPad, laptop, or a phone
-   turned sideways, per the breakpoint already used for the sidebar
-   shell. Hidden by default so mobile-portrait keeps the plain dot.
-   display is controlled entirely by these classes (not inline style,
-   which would out-specificity the media query and show year-round). */
-.weather-wide-chip, .weather-wide-header { display: none; }
+/* Weather chips (day-rail + header badge) show at every viewport,
+   including mobile portrait — they're compact enough to fit. When one
+   is shown, the chip's day replaces the plain activity dot instead of
+   showing both. */
+.weather-wide-chip { display: block; }
+.weather-wide-header { display: flex; }
+.day-chip .dot.has-weather-wide { display: none; }
 
 /* ---------- calendar ---------- */
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
@@ -352,6 +357,9 @@ h1, h2, h3 { font-family: var(--font-sans); margin: 0; letter-spacing: -0.03em; 
 .cal-daynum { font-size: 12px; display: flex; align-items: center; gap: 4px; }
 .cal-glyph { font-size: 10px; }
 .cal-dot { width: 5px; height: 5px; border-radius: 99px; margin-top: 5px; }
+.cal-wx-compact { font-size: 9px; color: var(--muted-2); margin-top: 2px; }
+/* City + one-line summary genuinely don't fit a 7-column grid on a phone
+   (unlike the weather chips above) — still gated to the wide breakpoint. */
 .weather-wide-cal { display: none; }
 
 /* ---------- sheets ---------- */
@@ -431,13 +439,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .costs-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
   .trip-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
   .journey-columns { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
-  .weather-wide-chip { display: block; }
-  .weather-wide-header { display: flex; }
-  .day-chip .dot.has-weather-wide { display: none; }
 
   .cal-cell { min-height: 92px; padding: 8px 9px 9px; }
   .cal-daynum { font-size: 12.5px; }
-  .cal-dot { display: none; }
+  .cal-wx-compact { display: none; }
   .weather-wide-cal { display: block; margin-top: 4px; }
   .cal-city { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
   .cal-summary { font-size: 10px; color: var(--muted); line-height: 1.35; margin-bottom: 3px; }

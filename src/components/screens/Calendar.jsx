@@ -91,7 +91,17 @@ export default function Calendar({ trip }) {
                       {num}
                       {glyph && <span className="cal-glyph">{glyph}</span>}
                     </div>
-                    <span className="dot cal-dot" style={{ background: day.transit.length ? 'var(--terra)' : '#ddd6c8' }} />
+                    {/* Compact temp-only readout, visible at every width — the
+                        richer city/summary block below is wide-screen only,
+                        content density (not weather) is what won't fit a
+                        7-column grid on a phone. */}
+                    {(wx || typ) ? (
+                      <div className="mono cal-wx-compact">
+                        {wx ? `${weatherIcon(wx.code).icon} ${Math.round(wx.max)}°` : `~${Math.round(typ.avgMax)}°`}
+                      </div>
+                    ) : (
+                      <span className="dot cal-dot" style={{ background: day.transit.length ? 'var(--terra)' : '#ddd6c8' }} />
+                    )}
                     <div className="weather-wide-cal">
                       {city && <div className="cal-city">{city}</div>}
                       {summary && <div className="cal-summary">{summary}</div>}
