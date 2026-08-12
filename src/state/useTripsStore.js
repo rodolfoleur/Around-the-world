@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
-import { rowToTrip, tripToInsertRow, patchToRow } from '../lib/tripMapper.js';
+import { rowToTrip, tripToInsertRow, patchToRow, mergeRealtimeRow } from '../lib/tripMapper.js';
 import { babymoonTrip, createEmptyTrip } from '../data/tripsRegistry.js';
 
 /**
@@ -15,12 +15,11 @@ export function useTripsStore(householdId, userId) {
   const seeded = useRef(false);
 
   const upsertLocal = useCallback((row) => {
-    const trip = rowToTrip(row);
     setTrips((prev) => {
-      const i = prev.findIndex((t) => t.id === trip.id);
-      if (i === -1) return [...prev, trip];
+      const i = prev.findIndex((t) => t.id === row.id);
+      if (i === -1) return [...prev, rowToTrip(row)];
       const next = prev.slice();
-      next[i] = trip;
+      next[i] = mergeRealtimeRow(prev[i], row);
       return next;
     });
   }, []);

@@ -35,7 +35,7 @@ export default function Journey({ trip }) {
       </div>
 
       <div className="journey-columns" style={{ padding: '0 20px' }}>
-        <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--line)', background: '#eae4d6', position: 'relative', height: 290 }}>
+        <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--line)', background: '#eae4d6', position: 'relative', height: 290, isolation: 'isolate' }}>
           <RealJourneyMap legFilter={state.legFilter} onSelectLeg={openBooking} />
         </div>
 

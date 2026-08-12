@@ -53,6 +53,15 @@ create table trips (
   updated_at timestamptz not null default now()
 );
 
+-- Without this, Postgres's logical replication (what Supabase Realtime
+-- rides on) is allowed to omit an unchanged jsonb column's value entirely
+-- from an UPDATE event once that column is stored TOASTed out-of-line —
+-- so e.g. adding an activity (which only touches extra_activities) could
+-- make `days`/`bookings` arrive as missing/null in the realtime payload
+-- even though the database itself was fine. Full replica identity always
+-- includes every column, closing that gap.
+alter table trips replica identity full;
+
 -- keep updated_at fresh so realtime consumers can tell what changed
 create or replace function touch_updated_at() returns trigger as $$
 begin
