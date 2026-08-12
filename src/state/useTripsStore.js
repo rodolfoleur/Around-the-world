@@ -12,7 +12,9 @@ import { babymoonTrip, createEmptyTrip } from '../data/tripsRegistry.js';
 export function useTripsStore(householdId, userId) {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState(null);
   const seeded = useRef(false);
+  const clearSaveError = useCallback(() => setSaveError(null), []);
 
   const upsertLocal = useCallback((row) => {
     setTrips((prev) => {
@@ -76,14 +78,34 @@ export function useTripsStore(householdId, userId) {
     return data.id;
   }, [householdId, userId, upsertLocal]);
 
-  /** Patches one trip (only extraCosts/extraActivities today) and pushes it to Supabase. */
+  /** Patches one trip and pushes it to Supabase. */
   const updateTrip = useCallback(async (tripId, patch) => {
     // optimistic local update so the UI feels instant on this device
-    setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, ...patch } : t)));
+    let previousTrips;
+    setTrips((prev) => {
+      previousTrips = prev;
+      return prev.map((t) => (t.id === tripId ? { ...t, ...patch } : t));
+    });
     const row = patchToRow(patch);
     if (Object.keys(row).length === 0) return;
-    await supabase.from('trips').update(row).eq('id', tripId);
+
+    const { error } = await supabase.from('trips').update(row).eq('id', tripId);
+    if (error) {
+      // The optimistic update above made this look saved when it wasn't —
+      // exactly the "works until you refresh, and never shows up on the
+      // other device" bug. Undo it (restoring just this trip, so anything
+      // else that changed in the meantime — a realtime echo, another edit
+      // — is untouched) and surface the real error instead of swallowing
+      // it, since a silent failure here is worse than a visible one.
+      console.error('updateTrip: save failed, reverting the optimistic local update', { tripId, patch, error });
+      setTrips((prev) => {
+        const prevTrip = previousTrips.find((t) => t.id === tripId);
+        if (!prevTrip) return prev;
+        return prev.map((t) => (t.id === tripId ? prevTrip : t));
+      });
+      setSaveError(error.message || 'That change could not be saved.');
+    }
   }, []);
 
-  return { trips, loading, createTrip, updateTrip };
+  return { trips, loading, createTrip, updateTrip, saveError, clearSaveError };
 }

@@ -9,7 +9,7 @@ const LAST_OPEN_KEY = 'voyager-last-open-trip';
 
 /** Mounted once auth + household are ready — owns the live trips list for that household. */
 function HouseholdApp({ auth }) {
-  const { trips, loading, createTrip, updateTrip } = useTripsStore(auth.household.householdId, auth.user.id);
+  const { trips, loading, createTrip, updateTrip, saveError, clearSaveError } = useTripsStore(auth.household.householdId, auth.user.id);
   const [activeTripId, setActiveTripId] = useState(() => {
     try { return window.localStorage.getItem(LAST_OPEN_KEY); } catch { return null; }
   });
@@ -21,25 +21,42 @@ function HouseholdApp({ auth }) {
     } catch { /* storage unavailable */ }
   }, [activeTripId]);
 
+  const errorBanner = saveError && (
+    <div
+      className="mono"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', fontSize: 11.5,
+        background: 'rgba(201,111,63,.15)', color: 'var(--terra)',
+      }}
+    >
+      <span style={{ flex: 1 }}>Couldn’t save that change: {saveError}</span>
+      <button type="button" onClick={clearSaveError} aria-label="Dismiss" style={{ border: 0, background: 'none', cursor: 'pointer', color: 'inherit', fontSize: 14, padding: 0 }}>×</button>
+    </div>
+  );
+
   if (loading) return <div className="app-screen" />;
 
   const meta = activeTripId ? trips.find((t) => t.id === activeTripId) : null;
 
   if (meta) {
     return (
-      <ErrorBoundary key={meta.id} onBack={() => setActiveTripId(null)} backLabel="Back to trips">
-        <TripView
-          key={meta.id}
-          meta={meta}
-          onBack={() => setActiveTripId(null)}
-          onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
-        />
-      </ErrorBoundary>
+      <>
+        {errorBanner}
+        <ErrorBoundary key={meta.id} onBack={() => setActiveTripId(null)} backLabel="Back to trips">
+          <TripView
+            key={meta.id}
+            meta={meta}
+            onBack={() => setActiveTripId(null)}
+            onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
+          />
+        </ErrorBoundary>
+      </>
     );
   }
 
   return (
     <div className="app-screen">
+      {errorBanner}
       <TripsHome
         trips={trips}
         onOpen={setActiveTripId}
