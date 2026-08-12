@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CITY_BY_DAY, CITY_COORDS } from '../../data/trip.js';
 import { supabase } from '../../lib/supabaseClient.js';
+import { fetchCityPhoto } from '../../lib/cityPhoto.js';
 
 // Deterministic per-location gradient (same name always gets the same one)
 // — the default look for any location without a real photo set. Reuses
@@ -105,7 +106,7 @@ function PhotoEditor({ name, current, onSet, onClear, onClose }) {
   );
 }
 
-function LocationCard({ stop, order, photoUrl, onSet, onClear, onOpenDay }) {
+function LocationCard({ stop, order, photoUrl, onSet, onOpenDay }) {
   const [editing, setEditing] = useState(false);
   const [broken, setBroken] = useState(false);
   const showPhoto = photoUrl && !broken;
@@ -148,7 +149,7 @@ function LocationCard({ stop, order, photoUrl, onSet, onClear, onOpenDay }) {
           name={stop.name}
           current={photoUrl}
           onSet={(url) => onSet(stop.name, url)}
-          onClear={() => onClear(stop.name)}
+          onClear={() => onSet(stop.name, null)}
           onClose={() => setEditing(false)}
         />
       )}
@@ -156,12 +157,49 @@ function LocationCard({ stop, order, photoUrl, onSet, onClear, onOpenDay }) {
   );
 }
 
+/**
+ * Auto-fills a photo the first time a location shows up with none, so
+ * "add a new city" just gets one without anyone having to go find it —
+ * paste-a-URL/upload still overrides it any time. `photos[name]` has
+ * three real states: absent (never looked), null (looked, found nothing
+ * usable — or the person removed it — don't keep retrying), or a URL
+ * (show it, whichever of the above put it there). A ref tracks in-flight
+ * lookups so a fast re-render can't fire the same fetch twice.
+ *
+ * All lookups kicked off by one effect run are written back in a single
+ * batched `setPhotos` call once they've all settled, rather than one write
+ * per result — two+ locations resolving close together each writing
+ * separately would each merge against the same pre-write snapshot and
+ * clobber each other (classic lost-update race), which is exactly the
+ * shape of this trigger (a new trip/day often adds several cities at once).
+ */
+function useAutoCityPhotos(stops, photos, setPhotos) {
+  const inFlight = useRef(new Set());
+  const namesKey = stops.map((s) => s.name).join('|');
+
+  useEffect(() => {
+    const pending = stops
+      .map((s) => s.name)
+      .filter((name) => !Object.prototype.hasOwnProperty.call(photos, name) && !inFlight.current.has(name));
+    if (pending.length === 0) return;
+    pending.forEach((name) => inFlight.current.add(name));
+
+    Promise.all(
+      pending.map((name) => fetchCityPhoto(name).catch(() => null).then((url) => [name, url])),
+    )
+      .then((results) => setPhotos(Object.fromEntries(results)))
+      .finally(() => pending.forEach((name) => inFlight.current.delete(name)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [namesKey, photos, setPhotos]);
+}
+
 /** The dashboard's "where this trip goes, in order" strip — bigger and
- * clearer than a one-line route string, with an optional photo per stop
- * (a tasteful gradient by default; paste a URL or upload your own). */
+ * clearer than a one-line route string, with a photo per stop looked up
+ * automatically (paste a URL or upload your own to override it). */
 export default function LocationStrip({ trip }) {
-  const { meta, days, photos, setPhoto, clearPhoto, patch } = trip;
+  const { meta, days, photos, setPhoto, setPhotos, patch } = trip;
   const stops = deriveStops(days, meta);
+  useAutoCityPhotos(stops, photos, setPhotos);
 
   if (stops.length === 0) {
     return meta.route ? (
@@ -178,7 +216,6 @@ export default function LocationStrip({ trip }) {
           order={i + 1}
           photoUrl={photos[s.name]}
           onSet={setPhoto}
-          onClear={clearPhoto}
           onOpenDay={(dayIndex) => patch({ tab: 'plan', day: dayIndex })}
         />
       ))}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   CARDS, FX, CITY_BY_DAY, CITY_CURRENCY, PLACES,
   STOP_KIND_TO_CATEGORY, EXPENSE_CATEGORIES, fmt,
@@ -30,6 +30,18 @@ const EMPTY_ARR = [];
 const EMPTY_OBJ = {};
 
 export function useTripState(meta, onUpdateTrip) {
+  // Always-current mirror of the latest `meta` prop, so mutators that merge
+  // against existing trip fields (photos, in particular) read the freshest
+  // value instead of whatever `meta` a stale useCallback closure captured.
+  // Without this, two writes to the same nested field fired close together
+  // (e.g. two auto photo lookups resolving within a render or two of each
+  // other) can each merge against the same outdated snapshot and clobber
+  // one another. Assigning during render is intentional and safe here — it
+  // never drives what gets rendered, it just keeps the ref current for the
+  // next callback invocation.
+  const metaRef = useRef(meta);
+  metaRef.current = meta;
+
   const [state, setState] = useState(() => ({
     tab: 'home',
     day: 0,
@@ -301,16 +313,26 @@ export function useTripState(meta, onUpdateTrip) {
 
   /** Sets (or clears, with url=null) a custom photo for one location —
    * keyed by the location's display name, so it works the same for a
-   * curated city or any free-text one a user typed into a day's City field. */
+   * curated city or any free-text one a user typed into a day's City field.
+   * Merges against `metaRef.current.photos` (not the `photos` closure) so
+   * this stays correct even if it fires right after another photo write
+   * that hasn't rendered through yet. */
   const setPhoto = useCallback((key, url) => {
-    onUpdateTrip({ photos: { ...photos, [key]: url } });
-  }, [photos, onUpdateTrip]);
+    onUpdateTrip({ photos: { ...metaRef.current.photos, [key]: url } });
+  }, [onUpdateTrip]);
 
   const clearPhoto = useCallback((key) => {
-    const next = { ...photos };
+    const next = { ...metaRef.current.photos };
     delete next[key];
     onUpdateTrip({ photos: next });
-  }, [photos, onUpdateTrip]);
+  }, [onUpdateTrip]);
+
+  /** Batched version of setPhoto for writing several locations' photos in
+   * one go — used by the auto-fetch lookup so N concurrent results become
+   * one merged write instead of N racing ones. */
+  const setPhotos = useCallback((entries) => {
+    onUpdateTrip({ photos: { ...metaRef.current.photos, ...entries } });
+  }, [onUpdateTrip]);
 
   /**
    * Patches one field on one day within the trip's days array. Refuses to
@@ -348,7 +370,7 @@ export function useTripState(meta, onUpdateTrip) {
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
     openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
-    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto,
+    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
   };
 }
