@@ -19,12 +19,17 @@ export default function Costs({ trip }) {
     .sort((a, b) => b.n - a.n);
   const maxMethod = methodList.length ? methodList[0].n : 1;
 
+  // Most recent first. Anything without a date (shouldn't happen once
+  // everything's backfilled, but defensively) sorts to the bottom instead
+  // of jumbling in with dated entries at the "empty string" position.
+  const rowsByDate = [...rows].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
   return (
     <div className="pad">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
-        <h2 className="h2">Costs</h2>
+        <h2 className="h2">Expenses</h2>
         <button type="button" className="btn-primary" style={{ padding: '10px 14px', fontSize: 10.5, marginTop: 4 }} onClick={openExpenseSheet}>
-          + Add cost
+          + Add expense
         </button>
       </div>
 
@@ -81,16 +86,21 @@ export default function Costs({ trip }) {
         <div>
           <h3 className="h3" style={{ marginBottom: 12 }}>All entries</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 18 }}>
-            {rows.map((r, i) => (
+            {rowsByDate.map((r, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--wash-2)' }}>
                 <span style={{ width: 9, height: 9, borderRadius: 3, background: CAT_COLOR[r.cat] || '#a09889', flex: 'none' }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500, lineHeight: 1.35 }}>{r.label}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                     <span
                       className="mono"
                       style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)', background: 'var(--wash)', padding: '3px 6px', borderRadius: 5 }}
                     >{r.method}</span>
+                    {r.date && (
+                      <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>
+                        {new Date(r.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
                     <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>
                       {r.amount === 0 ? 'Included' : {
                         GBP: '£', MXN: 'MX$', USD: 'US$', EUR: '€',

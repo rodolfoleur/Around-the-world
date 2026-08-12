@@ -2,21 +2,56 @@ import { CAT_COLOR, TERRA } from '../../data/trip.js';
 import { tripClock, formatRange } from '../../utils/dates.js';
 import { getDayParts } from '../../utils/dayParts.js';
 import { ChevronLeftIcon } from '../../components/icons.jsx';
+import LocationStrip from '../dashboard/LocationStrip.jsx';
+
+function normalizeWords(s) {
+  return (s || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 3);
+}
+
+/** Loose "are these talking about the same place" check — used to match a
+ * night's overnight text (free-form, e.g. "Grand Tirolia, Kitzbühel")
+ * against a Stay booking's title, since there's no structured link
+ * between the two. */
+function fuzzyMatch(a, b) {
+  const wa = normalizeWords(a);
+  const wb = normalizeWords(b);
+  if (!wa.length || !wb.length) return false;
+  return wa.filter((w) => wb.includes(w)).length >= Math.min(2, Math.min(wa.length, wb.length));
+}
+
+/** The single most relevant booking for "what's coming up" — whatever's
+ * actually moving today/next (a flight, car, transfer) takes priority
+ * since that's the thing most likely to need attention; falls back to
+ * tonight's lodging if there's no transit today. */
+function nextBookingIdx(nextDay, bookings) {
+  if (!nextDay) return -1;
+  if (nextDay.transit?.length) {
+    const idx = nextDay.transit[0].bk;
+    if (bookings[idx] && !bookings[idx].deleted) return idx;
+  }
+  if (nextDay.overnight) {
+    return bookings.findIndex((b) => !b.deleted && b.kind === 'Stay' && fuzzyMatch(b.title, nextDay.overnight));
+  }
+  return -1;
+}
 
 export default function Trip({ trip, onBack }) {
-  const { meta, days, bookings, go, total, rows, catMap, fmt } = trip;
+  const { meta, days, bookings, go, openBooking, total, rows, catMap, fmt } = trip;
+  const visibleBookings = bookings.filter((b) => !b.deleted);
 
   const catList = Object.keys(catMap)
     .map((k) => ({ label: k, n: catMap[k], color: CAT_COLOR[k] || '#a09889' }))
     .sort((a, b) => b.n - a.n);
 
   const currencyCount = new Set(rows.map((r) => r.cur)).size;
-  const flagged = bookings.filter((b) => b.detail.note).length;
+  const flagged = visibleBookings.filter((b) => b.detail.note).length;
 
   const clock = tripClock(days);
   const nextDayIdx = clock.currentIndex >= 0 ? clock.currentIndex : 0;
   const nextDay = days[nextDayIdx]; // days should never actually be empty for a real trip, but don't crash the whole dashboard if it somehow is
   const nextParts = nextDay ? getDayParts(nextDay, meta.extraActivities[nextDayIdx]).slice(0, 3) : [];
+  const nextBkIdx = nextBookingIdx(nextDay, bookings);
+  const nextBooking = nextBkIdx >= 0 ? bookings[nextBkIdx] : null;
 
   const countdownLabel = clock.status === 'live'
     ? 'happening now'
@@ -66,19 +101,15 @@ export default function Trip({ trip, onBack }) {
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 14 }}>
         <span className="mono" style={{ fontSize: 21, letterSpacing: '-.02em' }}>{formatRange(meta.startDate, meta.endDate)}</span>
         <span style={{ width: 4, height: 4, borderRadius: 99, background: '#c9c2b4' }} />
         <span className="mono" style={{ fontSize: 16, color: 'var(--muted)' }}>{days.length} days</span>
         <span style={{ flex: 1 }} />
         <span className="mono" style={{ fontSize: 13, color: 'var(--terra)' }}>{countdownLabel}</span>
       </div>
-      {meta.route && (
-        <div className="mono" style={{ fontSize: 11, letterSpacing: '.06em', color: 'var(--muted-2)', marginBottom: 20 }}>
-          {meta.route}
-        </div>
-      )}
-      {!meta.route && <div style={{ marginBottom: 8 }} />}
+
+      <LocationStrip trip={trip} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11, marginBottom: 22 }}>
         <button type="button" className="card-btn" onClick={() => go('budget')} style={{ padding: '15px 15px 14px' }}>
@@ -100,11 +131,11 @@ export default function Trip({ trip, onBack }) {
 
         <button type="button" className="card-btn" onClick={() => go('bookings')} style={{ padding: '15px 15px 14px' }}>
           <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Bookings</div>
-          <div className="mono" style={{ fontSize: 22, letterSpacing: '-.02em' }}>{bookings.length} <span style={{ color: '#c9c2b4' }}>filed</span></div>
-          {bookings.length > 0 ? (
+          <div className="mono" style={{ fontSize: 22, letterSpacing: '-.02em' }}>{visibleBookings.length} <span style={{ color: '#c9c2b4' }}>filed</span></div>
+          {visibleBookings.length > 0 ? (
             <>
               <div style={{ display: 'flex', gap: 3, marginTop: 11 }}>
-                {bookings.map((b, i) => (
+                {visibleBookings.map((b, i) => (
                   <span key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: b.detail.note ? '#ddd6c8' : TERRA }} />
                 ))}
               </div>
@@ -127,6 +158,28 @@ export default function Trip({ trip, onBack }) {
               style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer', fontSize: 10.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--terra)' }}
             >Full plan →</button>
           </div>
+
+          {nextBooking && (
+            <button
+              type="button"
+              className="card-dark"
+              style={{ display: 'flex', gap: 13, alignItems: 'center', padding: '13px 14px', width: '100%', boxSizing: 'border-box', border: 0, cursor: 'pointer', textAlign: 'left', marginBottom: 9 }}
+              onClick={() => openBooking(nextBkIdx)}
+            >
+              <span
+                className="mono"
+                style={{
+                  fontSize: 8.5, letterSpacing: '.1em', textTransform: 'uppercase', padding: '4px 7px', borderRadius: 6,
+                  background: 'rgba(255,255,255,.1)', color: '#ddd6c8', flex: 'none',
+                }}
+              >{nextBooking.kind}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, lineHeight: 1.3, color: 'var(--bone)' }}>{nextBooking.title}</span>
+                {nextBooking.sub && <span style={{ display: 'block', fontSize: 11.5, color: '#c9c2b4', marginTop: 3 }}>{nextBooking.sub}</span>}
+              </span>
+            </button>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
             {nextParts.length === 0 && (
               <button type="button" className="card-btn" style={{ padding: '13px 14px', color: 'var(--muted)' }} onClick={() => go('plan')}>

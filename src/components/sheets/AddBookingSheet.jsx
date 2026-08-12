@@ -75,6 +75,18 @@ export default function AddBookingSheet({ trip }) {
         </div>
       </div>
 
+      <label className="field-label" htmlFor="bk-date">Date — optional</label>
+      <input
+        id="bk-date"
+        type="date"
+        value={state.bkDate}
+        onChange={(e) => patch({ bkDate: e.target.value })}
+        style={{ marginBottom: 14 }}
+      />
+      <div className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)', marginTop: -8, marginBottom: 14 }}>
+        Used to gray this out and mark it "Complete" once it's passed — leave blank if it doesn't really have one.
+      </div>
+
       <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Status</div>
       <div style={{ display: 'flex', gap: 7, marginBottom: 18 }}>
         {STATUSES.map((s) => (

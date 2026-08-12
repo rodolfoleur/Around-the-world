@@ -1,8 +1,12 @@
 const FILTERS = ['All', 'Flights', 'Stays', 'Ground', 'Car', 'Events'];
 
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
 export default function Bookings({ trip }) {
   const { state, patch, meta, bookings, openBooking, openAddBookingSheet } = trip;
-  const filtered = bookings.filter((b) => state.bFilter === 'All' || b.group === state.bFilter);
+  const visible = bookings.filter((b) => !b.deleted);
+  const filtered = visible.filter((b) => state.bFilter === 'All' || b.group === state.bFilter);
+  const today = todayIso();
 
   return (
     <div className="pad" style={{ paddingTop: 20 }}>
@@ -16,7 +20,7 @@ export default function Bookings({ trip }) {
         {meta.curated ? 'Forwarded confirmations · auto-filed' : 'Flight, stay, ground and car confirmations'}
       </div>
 
-      {bookings.length === 0 ? (
+      {visible.length === 0 ? (
         <button
           type="button"
           className="dash-btn"
@@ -38,9 +42,17 @@ export default function Bookings({ trip }) {
           <div className="booking-list">
             {filtered.map((b) => {
               const idx = bookings.indexOf(b);
+              const isPast = !!(b.date && b.date < today);
               const good = b.status === 'Confirmed' || b.status === 'Prepaid';
+              const displayStatus = isPast ? 'Complete' : b.status;
               return (
-                <button key={idx} type="button" className="card-btn" style={{ padding: 15 }} onClick={() => openBooking(idx)}>
+                <button
+                  key={idx}
+                  type="button"
+                  className="card-btn"
+                  style={{ padding: 15, opacity: isPast ? 0.55 : 1 }}
+                  onClick={() => openBooking(idx)}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
                     <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>{b.kind}</span>
                     <span style={{ flex: 1, height: 1, background: 'var(--wash-2)' }} />
@@ -48,10 +60,10 @@ export default function Bookings({ trip }) {
                       className="mono"
                       style={{
                         fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', padding: '4px 7px', borderRadius: 6,
-                        background: good ? 'var(--wash)' : 'rgba(201,111,63,.14)',
-                        color: good ? 'var(--muted)' : 'var(--terra)',
+                        background: isPast ? 'var(--wash-2)' : (good ? 'var(--wash)' : 'rgba(201,111,63,.14)'),
+                        color: isPast ? 'var(--muted-3)' : (good ? 'var(--muted)' : 'var(--terra)'),
                       }}
-                    >{b.status}</span>
+                    >{displayStatus}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
                     <span style={{ fontSize: 15.5, fontWeight: 600, lineHeight: 1.25 }}>{b.title}</span>

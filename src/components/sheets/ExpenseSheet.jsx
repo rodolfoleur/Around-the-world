@@ -22,7 +22,7 @@ export default function ExpenseSheet({ trip }) {
 
   return (
     <div style={{ padding: '8px 22px 30px' }}>
-      <h3 style={{ fontWeight: 700, letterSpacing: '-.025em', fontSize: 25, margin: '0 0 16px' }}>Add a cost</h3>
+      <h3 style={{ fontWeight: 700, letterSpacing: '-.025em', fontSize: 25, margin: '0 0 16px' }}>Add an expense</h3>
 
       <div className="card" style={{ padding: '16px 18px', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -53,6 +53,15 @@ export default function ExpenseSheet({ trip }) {
           />
         </div>
       </div>
+
+      <label className="field-label" htmlFor="exp-date">Date paid</label>
+      <input
+        id="exp-date"
+        type="date"
+        value={state.expDate}
+        onChange={(e) => patch({ expDate: e.target.value })}
+        style={{ marginBottom: 18 }}
+      />
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
         {CURRENCIES.map((c) => (

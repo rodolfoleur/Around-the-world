@@ -149,7 +149,7 @@ DAYS.forEach((d) => { d.iso = `${TRIP_YEAR}-${MONTH_NUM[d.mon]}-${d.num}`; });
 
 export const BOOKINGS = [
   {
-    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'Aeroméxico AM379',
+    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'Aeroméxico AM379', date: '2026-08-21',
     sub: 'Los Cabos → Mexico City · Fri Aug 21 · Business, 2 passengers',
     price: 'MX$12,254', ref: 'GXUQKV', who: 'Round trip with AM382',
     detail: {
@@ -160,7 +160,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Flight', group: 'Flights', status: 'Overnight', title: 'British Airways BA0242',
+    kind: 'Flight', group: 'Flights', status: 'Overnight', title: 'British Airways BA0242', date: '2026-08-22',
     sub: 'Mexico City → London Heathrow · Fri Aug 21 → Sat Aug 22 · World Traveller Plus',
     price: 'MX$46,472', ref: 'YGKCWZ', who: 'Round trip with BA0243',
     detail: {
@@ -171,7 +171,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Ground', group: 'Ground', status: 'Confirmed', title: 'Booking.com Rides — Standard car',
+    kind: 'Ground', group: 'Ground', status: 'Confirmed', title: 'Booking.com Rides — Standard car', date: '2026-08-24',
     sub: 'SW9 0JP Clapham Rd → Heathrow · Mon Aug 24, 04:20 pickup',
     price: '£63.10', ref: '703464020', who: '247 Airport Transfer',
     detail: {
@@ -181,7 +181,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'British Airways BA0926',
+    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'British Airways BA0926', date: '2026-08-24',
     sub: 'Heathrow T5 → Munich T1 · Mon Aug 24 · Euro Traveller',
     price: '£373.00', ref: 'Y47V94', who: 'Round trip with BA0937',
     detail: {
@@ -191,7 +191,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Car', group: 'Car', status: 'Confirmed', title: 'Sixt — Premium Elite Sedan',
+    kind: 'Car', group: 'Car', status: 'Confirmed', title: 'Sixt — Premium Elite Sedan', date: '2026-08-28',
     sub: 'Munich Airport · Aug 24, 11:30 → Aug 28, 17:00',
     price: '€363.34', ref: '9737571910', who: 'BMW 5 / Audi A6 / Merc E or similar',
     detail: {
@@ -201,7 +201,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'British Airways BA0937',
+    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'British Airways BA0937', date: '2026-08-28',
     sub: 'Munich T1 → Heathrow T5 · Fri Aug 28 · Euro Traveller',
     price: 'incl. Y47V94', ref: 'Y47V94', who: 'Return of BA0926',
     detail: {
@@ -211,7 +211,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Ground', group: 'Ground', status: 'Confirmed', title: 'Booking.com Rides — Electric Standard',
+    kind: 'Ground', group: 'Ground', status: 'Confirmed', title: 'Booking.com Rides — Electric Standard', date: '2026-08-28',
     sub: 'Heathrow → SW9 0JP Clapham Rd · Fri Aug 28, from 21:45 landing',
     price: '£66.42', ref: '304126009', who: '247 Airport Transfer',
     detail: {
@@ -221,7 +221,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'British Airways BA0243',
+    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'British Airways BA0243', date: '2026-09-04',
     sub: 'Heathrow T5 → Mexico City T1 · Fri Sep 4 · World Traveller Plus',
     price: 'incl. YGKCWZ', ref: 'YGKCWZ', who: 'Return of BA0242',
     detail: {
@@ -231,7 +231,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Ground', group: 'Ground', status: 'Included', title: 'Booking.com taxi — MEX to hotel',
+    kind: 'Ground', group: 'Ground', status: 'Included', title: 'Booking.com taxi — MEX to hotel', date: '2026-09-04',
     sub: 'MEX Airport → INNSiDE Roma Norte · Fri Sep 4, 19:45',
     price: 'Included', ref: '356467129', who: 'No cost',
     detail: {
@@ -241,7 +241,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Ground', group: 'Ground', status: 'Confirmed', title: 'Booking.com Rides — People Carrier',
+    kind: 'Ground', group: 'Ground', status: 'Confirmed', title: 'Booking.com Rides — People Carrier', date: '2026-09-06',
     sub: 'INNSiDE Roma Norte → MEX Airport · Sun Sep 6, 07:50 pickup',
     price: '£26.00', ref: '672474128', who: 'E-Life Limo',
     detail: {
@@ -251,7 +251,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'Aeroméxico AM382',
+    kind: 'Flight', group: 'Flights', status: 'Confirmed', title: 'Aeroméxico AM382', date: '2026-09-06',
     sub: 'Mexico City → Los Cabos · Sun Sep 6 · Business, 2 passengers',
     price: 'incl. GXUQKV', ref: 'GXUQKV', who: 'Return of AM379',
     detail: {
@@ -262,7 +262,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Stay', group: 'Stays', status: 'No booking', title: 'London — home flat',
+    kind: 'Stay', group: 'Stays', status: 'No booking', title: 'London — home flat', date: '2026-09-04',
     sub: 'Aug 22–24 (2 nights) & Aug 28 – Sep 4 (7 nights)',
     price: '—', ref: '—', who: '9 nights total',
     detail: {
@@ -272,7 +272,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Stay', group: 'Stays', status: 'Prepaid', title: 'Grand Tirolia Kitzbühel',
+    kind: 'Stay', group: 'Stays', status: 'Prepaid', title: 'Grand Tirolia Kitzbühel', date: '2026-08-28',
     sub: 'Mon Aug 24 – Fri Aug 28 · 4 nights · Superior Double, Forest View',
     price: '€1,159.76', ref: '6105765738', who: 'PIN 6924',
     detail: {
@@ -289,7 +289,7 @@ export const BOOKINGS = [
     },
   },
   {
-    kind: 'Stay', group: 'Stays', status: 'Free cancel', title: 'INNSiDE by Meliá Roma Norte',
+    kind: 'Stay', group: 'Stays', status: 'Free cancel', title: 'INNSiDE by Meliá Roma Norte', date: '2026-09-06',
     sub: 'Fri Sep 4 – Sun Sep 6 · 2 nights · The INNSiDE Room, King',
     price: 'US$376.21', ref: '6580133542', who: 'No prepayment',
     detail: {
@@ -309,16 +309,16 @@ export const FX = { GBP: 1, MXN: 23.37, USD: 1.3465, EUR: 1.17 };
 export const SYM = { GBP: '£', MXN: 'MX$', USD: 'US$', EUR: '€' };
 
 export const COSTS = [
-  { label: 'Aeroméxico AM379 / AM382', cat: 'Flights', amount: 12254, cur: 'MXN', method: 'Amex ••1006' },
-  { label: 'British Airways BA0242 / BA0243', cat: 'Flights', amount: 46472, cur: 'MXN', method: 'Amex ••1006' },
-  { label: 'British Airways BA0926 / BA0937', cat: 'Flights', amount: 373, cur: 'GBP', method: 'Visa ••4417' },
-  { label: 'Grand Tirolia Kitzbühel · 4 nights', cat: 'Lodging', amount: 992, cur: 'GBP', method: 'Visa ••4417' },
-  { label: 'INNSiDE by Meliá Roma Norte', cat: 'Lodging', amount: 376.21, cur: 'USD', method: 'On arrival' },
-  { label: 'Sixt car rental, Munich', cat: 'Car Rental', amount: 363.34, cur: 'EUR', method: 'Visa ••4417' },
-  { label: 'Rides — SW9 to Heathrow', cat: 'Ground Transport', amount: 63.10, cur: 'GBP', method: 'Visa ••4417' },
-  { label: 'Rides — Heathrow to SW9 flat', cat: 'Ground Transport', amount: 66.42, cur: 'GBP', method: 'Visa ••4417' },
-  { label: 'Rides — Hotel to MEX Airport', cat: 'Ground Transport', amount: 26, cur: 'GBP', method: 'Visa ••4417' },
-  { label: 'MEX airport taxi', cat: 'Ground Transport', amount: 0, cur: 'GBP', method: 'Included' },
+  { label: 'Aeroméxico AM379 / AM382', cat: 'Flights', amount: 12254, cur: 'MXN', method: 'Amex ••1006', date: '2026-06-15' },
+  { label: 'British Airways BA0242 / BA0243', cat: 'Flights', amount: 46472, cur: 'MXN', method: 'Amex ••1006', date: '2026-06-15' },
+  { label: 'British Airways BA0926 / BA0937', cat: 'Flights', amount: 373, cur: 'GBP', method: 'Visa ••4417', date: '2026-06-20' },
+  { label: 'Grand Tirolia Kitzbühel · 4 nights', cat: 'Lodging', amount: 992, cur: 'GBP', method: 'Visa ••4417', date: '2026-06-10' },
+  { label: 'INNSiDE by Meliá Roma Norte', cat: 'Lodging', amount: 376.21, cur: 'USD', method: 'On arrival', date: '2026-07-25' },
+  { label: 'Sixt car rental, Munich', cat: 'Car Rental', amount: 363.34, cur: 'EUR', method: 'Visa ••4417', date: '2026-07-01' },
+  { label: 'Rides — SW9 to Heathrow', cat: 'Ground Transport', amount: 63.10, cur: 'GBP', method: 'Visa ••4417', date: '2026-08-10' },
+  { label: 'Rides — Heathrow to SW9 flat', cat: 'Ground Transport', amount: 66.42, cur: 'GBP', method: 'Visa ••4417', date: '2026-08-10' },
+  { label: 'Rides — Hotel to MEX Airport', cat: 'Ground Transport', amount: 26, cur: 'GBP', method: 'Visa ••4417', date: '2026-08-10' },
+  { label: 'MEX airport taxi', cat: 'Ground Transport', amount: 0, cur: 'GBP', method: 'Included', date: '2026-08-10' },
 ];
 
 export const CAT_COLOR = {

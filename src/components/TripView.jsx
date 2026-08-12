@@ -17,7 +17,7 @@ const TABS = [
   ['home', 'Trip'],
   ['plan', 'Plan'],
   ['map', 'Journey'],
-  ['budget', 'Costs'],
+  ['budget', 'Expenses'],
   ['bookings', 'Bookings'],
   ['calendar', 'Calendar'],
   ['todo', 'To-do'],

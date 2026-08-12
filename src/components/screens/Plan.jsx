@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { TERRA, CITY_BY_DAY, CITY_COORDS } from '../../data/trip.js';
 import { getDayParts } from '../../utils/dayParts.js';
-import { transitIcon, ChevronLeftIcon } from '../../components/icons.jsx';
+import { transitIcon, ChevronLeftIcon, CalendarIcon } from '../../components/icons.jsx';
 import { useTripWeather } from '../../state/useTripWeather.js';
 import { weatherIcon } from '../../lib/weather.js';
+import { travelGlyph } from '../../utils/travelGlyph.js';
 
 const KNOWN_CITIES = Object.values(CITY_COORDS).map((c) => c.label);
 
@@ -133,7 +134,7 @@ function dayHasContent(d, extra) {
 }
 
 export default function Plan({ trip }) {
-  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight, updateDayCity, goToDay } = trip;
+  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight, updateDayCity, goToDay, go } = trip;
   const railRef = useRef(null);
   const lastDay = useRef(null);
   const [showWxDetail, setShowWxDetail] = useState(false);
@@ -154,11 +155,27 @@ export default function Plan({ trip }) {
   const todayWx = forecast[day.iso];
   const todayTypical = !todayWx ? typical[day.iso] : null;
   const effectiveCity = day.city || (meta.curated ? (CITY_COORDS[CITY_BY_DAY[state.day]]?.label || '') : '');
+  const glyph = travelGlyph(day, meta.bookings);
 
   return (
     <div className="pad-top">
       <div className="pad" style={{ paddingBottom: 0 }}>
-        <h2 className="h2" style={{ marginBottom: 4 }}>Itinerary</h2>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+          <h2 className="h2">Itinerary</h2>
+          <button
+            type="button"
+            onClick={() => go('calendar')}
+            className="mono"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--line-strong)', background: '#fff',
+              borderRadius: 10, cursor: 'pointer', padding: '7px 11px', fontSize: 10, letterSpacing: '.06em',
+              textTransform: 'uppercase', color: 'var(--muted)', flex: 'none',
+            }}
+          >
+            <span style={{ width: 14, height: 14, display: 'flex' }}><CalendarIcon width={14} height={14} /></span>
+            Calendar
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <button
             type="button"
@@ -185,6 +202,7 @@ export default function Plan({ trip }) {
             className="mono"
             style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, background: tc.bg, color: tc.fg }}
           >{day.tag}</span>
+          {glyph && <span style={{ fontSize: 14 }} title="Travel today">{glyph}</span>}
           {todayWx && (
             <button
               type="button"

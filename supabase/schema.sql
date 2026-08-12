@@ -50,6 +50,7 @@ create table trips (
   extra_activities jsonb not null default '{}',
   custom_cards jsonb not null default '[]',
   todos jsonb not null default '[]',
+  photos jsonb not null default '{}',
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -207,3 +208,26 @@ create policy "members can delete their household's trips"
 -- Realtime: broadcast row changes on trips to subscribed clients
 -- ---------------------------------------------------------------------
 alter publication supabase_realtime add table trips;
+
+-- ---------------------------------------------------------------------
+-- Storage: a public bucket for uploaded location photos. Public-read is
+-- deliberate (they're just destination photos, nothing private) — the
+-- trip data that actually matters stays behind the RLS above. Any signed-in
+-- user can upload/replace one; for a 2-person household app that's the
+-- same trust level every other write in this schema already assumes.
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('trip-photos', 'trip-photos', true)
+on conflict (id) do nothing;
+
+create policy "trip photos are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'trip-photos');
+
+create policy "signed-in users can upload trip photos"
+  on storage.objects for insert
+  with check (bucket_id = 'trip-photos' and auth.role() = 'authenticated');
+
+create policy "signed-in users can replace trip photos"
+  on storage.objects for update
+  using (bucket_id = 'trip-photos' and auth.role() = 'authenticated');

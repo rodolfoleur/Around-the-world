@@ -1,9 +1,18 @@
+import { useState } from 'react';
+
 export default function BookingSheet({ trip }) {
-  const { state, bookings, closeSheet } = trip;
+  const { state, bookings, closeSheet, deleteBooking } = trip;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const b = bookings[state.bookingIdx];
   const d = b.detail || {};
   const rows = d.rows || [];
   const hasRoute = d.leftValue || d.rightValue;
+
+  const remove = () => {
+    if (!confirmingDelete) { setConfirmingDelete(true); return; }
+    deleteBooking(state.bookingIdx);
+    closeSheet();
+  };
 
   return (
     <div style={{ padding: '8px 0 30px' }}>
@@ -54,7 +63,7 @@ export default function BookingSheet({ trip }) {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 9 }}>
+        <div style={{ display: 'flex', gap: 9, marginBottom: 9 }}>
           <button type="button" className="btn-outline" style={{ flex: 1, padding: 14, fontSize: 11 }} onClick={closeSheet}>
             Add to wallet
           </button>
@@ -62,6 +71,19 @@ export default function BookingSheet({ trip }) {
             Open booking
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={remove}
+          className="mono"
+          style={{
+            width: '100%', padding: 13, fontSize: 10.5, letterSpacing: '.06em', textTransform: 'uppercase',
+            border: `1px solid ${confirmingDelete ? 'var(--terra)' : 'var(--line)'}`, borderRadius: 12, cursor: 'pointer',
+            background: confirmingDelete ? 'rgba(201,111,63,.1)' : 'none', color: confirmingDelete ? 'var(--terra)' : 'var(--muted-3)',
+          }}
+        >
+          {confirmingDelete ? 'Tap again to confirm delete' : 'Delete booking'}
+        </button>
       </div>
     </div>
   );

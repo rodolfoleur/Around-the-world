@@ -20,6 +20,7 @@ export function rowToTrip(row) {
     extraActivities: row.extra_activities || {},
     customCards: row.custom_cards || [],
     todos: row.todos || [],
+    photos: row.photos || {},
     updatedAt: row.updated_at,
   };
 }
@@ -41,6 +42,7 @@ export function tripToInsertRow(trip, householdId, userId) {
     extra_activities: trip.extraActivities || {},
     custom_cards: trip.customCards || [],
     todos: trip.todos || [],
+    photos: trip.photos || {},
     created_by: userId,
   };
 }
@@ -55,7 +57,7 @@ export function tripToInsertRow(trip, householdId, userId) {
 // appear to vanish after adding an activity. `ARRAY_COLS`/`OBJECT_COLS` are
 // the jsonb columns this can happen to, mapped to their camelCase trip key.
 const ARRAY_COLS = { days: 'days', bookings: 'bookings', costs: 'costs', extra_costs: 'extraCosts', custom_cards: 'customCards', travelers: 'travelers', todos: 'todos' };
-const OBJECT_COLS = { extra_activities: 'extraActivities' };
+const OBJECT_COLS = { extra_activities: 'extraActivities', photos: 'photos' };
 
 /**
  * Merges a realtime `payload.new` row on top of the trip already showing
@@ -105,6 +107,7 @@ const PATCH_KEY_MAP = {
   endDate: 'end_date',
   travelers: 'travelers',
   todos: 'todos',
+  photos: 'photos',
 };
 
 /** Converts a partial camelCase patch (only the fields we actually mutate) into row column names. */

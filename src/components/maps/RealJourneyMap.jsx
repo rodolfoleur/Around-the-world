@@ -11,8 +11,12 @@ const TYPE_COLOR = { Flight: INK, Car: PLUM, Ground: GOLD };
  * coordinates, replacing the old schematic placeholder SVG. Circle markers
  * instead of Leaflet's default pin icon, since the default icon's image
  * assets don't resolve correctly under Vite without extra config.
+ *
+ * `focusedLegN`, when set, zooms to just that one leg's two points (and
+ * highlights its line) instead of fitting every visible leg — this is
+ * what powers "click a journey and the map zooms in to it."
  */
-export default function RealJourneyMap({ legFilter, onSelectLeg }) {
+export default function RealJourneyMap({ legFilter, focusedLegN, onSelectLeg }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const layerRef = useRef(null);
@@ -44,31 +48,40 @@ export default function RealJourneyMap({ legFilter, onSelectLeg }) {
 
     const legs = LEGS.filter((l) => legFilter === 'All' || l.type === legFilter);
     const bounds = [];
+    const focusBounds = [];
     const plotted = new Set();
 
     legs.forEach((leg) => {
       const from = LOCATION_COORDS[leg.from];
       const to = LOCATION_COORDS[leg.to];
       if (!from || !to) return;
+      const isFocused = focusedLegN != null && leg.n === focusedLegN;
+      const dimmed = focusedLegN != null && !isFocused;
       const color = TYPE_COLOR[leg.type] || INK;
 
       const line = L.polyline([[from.lat, from.lon], [to.lat, to.lon]], {
-        color, weight: 2.5, opacity: 0.85, dashArray: leg.type === 'Flight' ? '1 7' : null, lineCap: 'round',
+        color, weight: isFocused ? 4.5 : 2.5, opacity: dimmed ? 0.25 : 0.85,
+        dashArray: leg.type === 'Flight' ? '1 7' : null, lineCap: 'round',
       }).addTo(layer);
-      if (onSelectLeg) line.on('click', () => onSelectLeg(leg.bk));
+      if (onSelectLeg) line.on('click', () => onSelectLeg(leg.n));
       bounds.push([from.lat, from.lon], [to.lat, to.lon]);
+      if (isFocused) focusBounds.push([from.lat, from.lon], [to.lat, to.lon]);
 
       [[leg.from, from], [leg.to, to]].forEach(([code, point]) => {
         if (plotted.has(code)) return;
         plotted.add(code);
         L.circleMarker([point.lat, point.lon], {
-          radius: 6, color: '#faf8f4', weight: 2, fillColor: '#c96f3f', fillOpacity: 1,
+          radius: 6, color: '#faf8f4', weight: 2, fillColor: '#c96f3f', fillOpacity: dimmed ? 0.4 : 1,
         }).addTo(layer).bindTooltip(`${code} — ${point.label}`, { direction: 'top', offset: [0, -6] });
       });
     });
 
-    if (bounds.length) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 11 });
-  }, [legFilter, onSelectLeg]);
+    if (focusBounds.length) {
+      map.fitBounds(focusBounds, { padding: [48, 48], maxZoom: 12 });
+    } else if (bounds.length) {
+      map.fitBounds(bounds, { padding: [28, 28], maxZoom: 11 });
+    }
+  }, [legFilter, focusedLegN, onSelectLeg]);
 
   return <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />;
 }

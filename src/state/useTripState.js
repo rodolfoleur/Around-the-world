@@ -37,12 +37,14 @@ export function useTripState(meta, onUpdateTrip) {
     bookingIdx: 0,
     bFilter: 'All',
     legFilter: 'All',
+    journeyFocusLeg: null,
 
     // add-a-cost sheet
     expDesc: '',
     expAmount: '',
     expCur: meta.currency || 'GBP',
     expCat: 'Meals',
+    expDate: new Date().toISOString().slice(0, 10),
     payMethod: 'Credit',
     card: 'visa',
 
@@ -64,6 +66,7 @@ export function useTripState(meta, onUpdateTrip) {
     bkSub: '',
     bkPrice: '',
     bkStatus: 'Confirmed',
+    bkDate: '',
     bkRef: '',
     bkWho: '',
     bkLeftLabel: '',
@@ -88,13 +91,13 @@ export function useTripState(meta, onUpdateTrip) {
   const closeSheet = useCallback(() => patch({ sheet: null }), [patch]);
   const openBooking = useCallback((i) => patch({ sheet: 'booking', bookingIdx: i }), [patch]);
   const openExpenseSheet = useCallback(() => patch({
-    sheet: 'expense', expDesc: '', expAmount: '', payMethod: 'Credit',
+    sheet: 'expense', expDesc: '', expAmount: '', payMethod: 'Credit', expDate: new Date().toISOString().slice(0, 10),
   }), [patch]);
   const openAddStopSheet = useCallback(() => patch({
     sheet: 'addstop', activityName: '', hasLocation: false, stopEstimate: '', stopQueryText: '', stopPick: 0,
   }), [patch]);
   const openAddBookingSheet = useCallback(() => patch({
-    sheet: 'addbooking', bkKind: 'Flight', bkTitle: '', bkSub: '', bkPrice: '', bkStatus: 'Confirmed',
+    sheet: 'addbooking', bkKind: 'Flight', bkTitle: '', bkSub: '', bkPrice: '', bkStatus: 'Confirmed', bkDate: '',
     bkRef: '', bkWho: '', bkLeftLabel: 'Depart', bkLeftValue: '', bkLeftSub: '',
     bkRightLabel: 'Arrive', bkRightValue: '', bkRightSub: '', bkNote: '',
   }), [patch]);
@@ -143,6 +146,7 @@ export function useTripState(meta, onUpdateTrip) {
   const cards = useMemo(() => [...CARDS, ...customCards], [customCards]);
 
   const todos = meta.todos || EMPTY_ARR;
+  const photos = meta.photos || EMPTY_OBJ;
 
   const EMPTY_DAY = { short: '', label: '', tag: 'Empty', transit: [], parts: {}, overnight: '' };
   const day = days.length ? days[Math.min(state.day, days.length - 1)] : EMPTY_DAY;
@@ -157,6 +161,7 @@ export function useTripState(meta, onUpdateTrip) {
       cat: state.expCat,
       amount,
       cur: state.expCur,
+      date: state.expDate || new Date().toISOString().slice(0, 10),
       method: state.payMethod === 'Credit'
         ? (cards.find((c) => c.id === state.card)?.name || 'Credit')
         : state.payMethod,
@@ -164,7 +169,7 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ extraCosts: [...extraCosts, entry] });
     patch({ sheet: null, newCategoryDraft: '' });
     return true;
-  }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.payMethod, state.card, cards, extraCosts, onUpdateTrip, patch]);
+  }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.expDate, state.payMethod, state.card, cards, extraCosts, onUpdateTrip, patch]);
 
   const addActivity = useCallback(() => {
     if (!state.activityName.trim()) return false;
@@ -217,6 +222,7 @@ export function useTripState(meta, onUpdateTrip) {
       title: state.bkTitle.trim(),
       sub: state.bkSub.trim(),
       price: state.bkPrice.trim(),
+      date: state.bkDate || undefined,
       ref: state.bkRef.trim(),
       who: state.bkWho.trim(),
       detail: {
@@ -231,9 +237,23 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ bookings: [...bookings, entry] });
     patch({ sheet: null });
     return true;
-  }, [state.bkKind, state.bkTitle, state.bkSub, state.bkPrice, state.bkStatus, state.bkRef, state.bkWho,
+  }, [state.bkKind, state.bkTitle, state.bkSub, state.bkPrice, state.bkStatus, state.bkDate, state.bkRef, state.bkWho,
     state.bkLeftLabel, state.bkLeftValue, state.bkLeftSub, state.bkRightLabel, state.bkRightValue, state.bkRightSub,
     state.bkNote, bookings, onUpdateTrip, patch]);
+
+  /**
+   * Soft-deletes a booking — flags it rather than removing it from the
+   * array. Bookings are referenced *positionally* elsewhere (a day's
+   * transit items, and the curated trip's journey legs, both point at a
+   * booking by array index), so actually splicing one out would silently
+   * shift every later index and scramble those references. Filtering out
+   * `deleted` bookings wherever they're listed gets the same visible
+   * result without that risk.
+   */
+  const deleteBooking = useCallback((idx) => {
+    if (idx < 0 || idx >= bookings.length) return;
+    onUpdateTrip({ bookings: bookings.map((b, i) => (i === idx ? { ...b, deleted: true } : b)) });
+  }, [bookings, onUpdateTrip]);
 
   /** Adds a payment card — only ever keeps the last 4 digits, never the full number. */
   const addCard = useCallback(() => {
@@ -279,6 +299,19 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ todos: todos.filter((t) => t.id !== id) });
   }, [todos, onUpdateTrip]);
 
+  /** Sets (or clears, with url=null) a custom photo for one location —
+   * keyed by the location's display name, so it works the same for a
+   * curated city or any free-text one a user typed into a day's City field. */
+  const setPhoto = useCallback((key, url) => {
+    onUpdateTrip({ photos: { ...photos, [key]: url } });
+  }, [photos, onUpdateTrip]);
+
+  const clearPhoto = useCallback((key) => {
+    const next = { ...photos };
+    delete next[key];
+    onUpdateTrip({ photos: next });
+  }, [photos, onUpdateTrip]);
+
   /**
    * Patches one field on one day within the trip's days array. Refuses to
    * write if `days` looks empty/out of range — days should never actually
@@ -314,8 +347,8 @@ export function useTripState(meta, onUpdateTrip) {
 
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
-    openAddCardSheet, addExpense, addActivity, addBooking, addCard, updateOvernight, updateDayCity, goToDay,
-    addTodo, toggleTodo, removeTodo,
-    days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, fmt,
+    openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
+    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto,
+    days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
   };
 }

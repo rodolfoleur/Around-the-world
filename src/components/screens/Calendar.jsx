@@ -2,25 +2,9 @@ import { CITY_BY_DAY, CITY_COORDS } from '../../data/trip.js';
 import { getDayParts } from '../../utils/dayParts.js';
 import { useTripWeather } from '../../state/useTripWeather.js';
 import { weatherIcon } from '../../lib/weather.js';
+import { travelGlyph } from '../../utils/travelGlyph.js';
 
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-/** Air, land, or water — whichever the day's transit is, as one glyph. */
-function travelGlyph(day, bookings) {
-  if (!day.transit || !day.transit.length) return null;
-  for (const t of day.transit) {
-    const kind = bookings[t.bk]?.kind;
-    if (kind === 'Flight') return '✈️';
-    if (kind === 'Car') return '🚗';
-    if (kind === 'Ground') return '🚆';
-    if (kind === 'Water' || kind === 'Boat') return '⛴️';
-  }
-  const s = (day.transit[0].t || '').toLowerCase();
-  if (s.includes('car') || s.includes('sixt') || s.includes('taxi')) return '🚗';
-  if (s.includes('boat') || s.includes('ferry') || s.includes('cruise') || s.includes('sail')) return '⛴️';
-  if (s.includes('train') || s.includes('rail')) return '🚆';
-  return '✈️';
-}
 
 /** A one-line highlight for the day — up to two of its planned items. */
 function daySummary(day, extra) {
