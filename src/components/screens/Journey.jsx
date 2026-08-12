@@ -1,5 +1,5 @@
 import { LEGS, INK, PLUM, GOLD } from '../../data/trip.js';
-import JourneyMap from '../maps/JourneyMap.jsx';
+import RealJourneyMap from '../maps/RealJourneyMap.jsx';
 
 const FILTERS = ['All', 'Flight', 'Ground', 'Car'];
 
@@ -36,7 +36,7 @@ export default function Journey({ trip }) {
 
       <div className="journey-columns" style={{ padding: '0 20px' }}>
         <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--line)', background: '#eae4d6', position: 'relative', height: 290 }}>
-          <JourneyMap />
+          <RealJourneyMap legFilter={state.legFilter} onSelectLeg={openBooking} />
         </div>
 
         <div>

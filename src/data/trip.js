@@ -328,6 +328,19 @@ export const CAT_COLOR = {
 
 export const AIRPORTS = { SJD: { x: 11, y: 64 }, MEX: { x: 19, y: 70 }, LHR: { x: 57, y: 26 }, MUC: { x: 66, y: 33 } };
 
+// Real coordinates for every point a journey leg touches — airports plus
+// the informal stops (a postcode, a town, "the hotel") LEGS also uses —
+// so the actual map can plot an accurate route, not just the 4 airports.
+export const LOCATION_COORDS = {
+  SJD: { lat: 23.1518, lon: -109.7215, label: 'Los Cabos Intl (SJD)' },
+  MEX: { lat: 19.4363, lon: -99.0721, label: 'Mexico City Intl (MEX)' },
+  LHR: { lat: 51.4700, lon: -0.4543, label: 'London Heathrow (LHR)' },
+  MUC: { lat: 48.3538, lon: 11.7861, label: 'Munich Airport (MUC)' },
+  SW9: { lat: 51.4720, lon: -0.1160, label: 'SW9, London' },
+  Kitz: { lat: 47.4467, lon: 12.3927, label: 'Kitzbühel' },
+  Hotel: { lat: 19.4194, lon: -99.1677, label: 'Roma Norte, Mexico City' },
+};
+
 export const LEGS = [
   { n: '1', from: 'SJD', to: 'MEX', sub: 'Aeroméxico AM379 · Business', when: 'Aug 21', type: 'Flight', bk: 0 },
   { n: '2', from: 'MEX', to: 'LHR', sub: 'British Airways BA0242 · overnight', when: 'Aug 21', type: 'Flight', bk: 1 },
