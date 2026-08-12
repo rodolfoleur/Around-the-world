@@ -1,13 +1,23 @@
 import { CAT_COLOR } from '../../data/trip.js';
 
+// Payment methods don't have hand-picked colors like categories do — rotate
+// through a small palette keyed by first appearance, so it's at least
+// consistent within one trip's breakdown.
+const METHOD_PALETTE = ['#c96f3f', '#3f6f8f', '#6b8f5a', '#8a6a9f', '#b08d4f', '#a09889'];
+
 export default function Costs({ trip }) {
-  const { rows, total, catMap, fmt, openExpenseSheet } = trip;
+  const { rows, total, catMap, methodMap, fmt, openExpenseSheet } = trip;
 
   const catList = Object.keys(catMap)
     .map((k) => ({ label: k, n: catMap[k], color: CAT_COLOR[k] || '#a09889' }))
     .sort((a, b) => b.n - a.n);
   const maxCat = catList.length ? catList[0].n : 1;
   const currencies = Array.from(new Set(rows.map((r) => r.cur))).sort().join(', ');
+
+  const methodList = Object.keys(methodMap)
+    .map((k, i) => ({ label: k, n: methodMap[k], color: METHOD_PALETTE[i % METHOD_PALETTE.length] }))
+    .sort((a, b) => b.n - a.n);
+  const maxMethod = methodList.length ? methodList[0].n : 1;
 
   return (
     <div className="pad">
@@ -46,6 +56,22 @@ export default function Costs({ trip }) {
                 </div>
                 <div style={{ height: 9, borderRadius: 99, background: 'var(--wash-2)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 99, background: c.color, width: Math.round(c.n / maxCat * 100) + '%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <h3 className="h3" style={{ marginBottom: 14 }}>By payment method</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 15, marginBottom: 24 }}>
+            {methodList.map((m) => (
+              <div key={m.label}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 7 }}>
+                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500 }}>{m.label}</span>
+                  <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>{Math.round(m.n / total * 100)}%</span>
+                  <span className="mono" style={{ fontSize: 13.5 }}>£{fmt(m.n)}</span>
+                </div>
+                <div style={{ height: 9, borderRadius: 99, background: 'var(--wash-2)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', borderRadius: 99, background: m.color, width: Math.round(m.n / maxMethod * 100) + '%' }} />
                 </div>
               </div>
             ))}

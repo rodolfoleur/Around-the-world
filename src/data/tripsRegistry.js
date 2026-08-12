@@ -27,6 +27,7 @@ export function babymoonTrip() {
     costs: COSTS,
     extraCosts: [],
     extraActivities: {},
+    customCards: [],
   };
 }
 
@@ -77,5 +78,6 @@ export function createEmptyTrip({ title, startDate, endDate, travelersText, rout
     costs: [],
     extraCosts: [],
     extraActivities: {},
+    customCards: [],
   };
 }

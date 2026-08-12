@@ -18,6 +18,7 @@ export function rowToTrip(row) {
     costs: row.costs || [],
     extraCosts: row.extra_costs || [],
     extraActivities: row.extra_activities || {},
+    customCards: row.custom_cards || [],
     updatedAt: row.updated_at,
   };
 }
@@ -37,6 +38,7 @@ export function tripToInsertRow(trip, householdId, userId) {
     costs: trip.costs || [],
     extra_costs: trip.extraCosts || [],
     extra_activities: trip.extraActivities || {},
+    custom_cards: trip.customCards || [],
     created_by: userId,
   };
 }
@@ -49,6 +51,7 @@ const PATCH_KEY_MAP = {
   currency: 'currency',
   bookings: 'bookings',
   days: 'days',
+  customCards: 'custom_cards',
   startDate: 'start_date',
   endDate: 'end_date',
   travelers: 'travelers',

@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { SYM, FX, EXPENSE_CATEGORIES, CARDS } from '../../data/trip.js';
+import { SYM, FX } from '../../data/trip.js';
 import { PAY_ICONS } from '../../components/icons.jsx';
 
 const CURRENCIES = ['GBP', 'EUR', 'USD', 'MXN'];
 const METHODS = ['Cash', 'Debit', 'Credit'];
 
 export default function ExpenseSheet({ trip }) {
-  const { state, patch, addExpense } = trip;
+  const { state, patch, addExpense, categories, cards, openAddCardSheet } = trip;
   const [tried, setTried] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
 
   const amountNum = parseFloat(state.expAmount);
   const gbpPreview = !Number.isNaN(amountNum) ? (amountNum / FX[state.expCur]) : 0;
@@ -71,10 +72,24 @@ export default function ExpenseSheet({ trip }) {
       </div>
 
       <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Category</div>
-      <div style={{ display: 'flex', gap: 7, marginBottom: 20, flexWrap: 'wrap' }}>
-        {EXPENSE_CATEGORIES.map((c) => (
+      <div style={{ display: 'flex', gap: 7, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        {categories.map((c) => (
           <button key={c} type="button" className={'pill' + (state.expCat === c ? ' on' : '')} onClick={() => patch({ expCat: c })}>{c}</button>
         ))}
+        {addingCategory ? (
+          <input
+            autoFocus
+            type="text"
+            placeholder="New category…"
+            value={state.newCategoryDraft}
+            onChange={(e) => patch({ newCategoryDraft: e.target.value, expCat: e.target.value.trim() || state.expCat })}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setAddingCategory(false); }}
+            onBlur={() => setAddingCategory(false)}
+            style={{ width: 130, padding: '7px 12px', fontSize: 11, borderRadius: 99 }}
+          />
+        ) : (
+          <button type="button" className="pill" onClick={() => setAddingCategory(true)}>+ New</button>
+        )}
       </div>
 
       <div className="mono" style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Paid with</div>
@@ -104,7 +119,7 @@ export default function ExpenseSheet({ trip }) {
       {state.payMethod === 'Credit' && (
         <div style={{ padding: '4px 0 0', marginBottom: 18, animation: 'fadeIn .22s ease' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {CARDS.map((c) => {
+            {cards.map((c) => {
               const on = state.card === c.id;
               return (
                 <button
@@ -135,7 +150,7 @@ export default function ExpenseSheet({ trip }) {
                 </button>
               );
             })}
-            <button type="button" className="dash-btn" style={{ width: '100%', padding: 11 }}>+ Add a card</button>
+            <button type="button" className="dash-btn" style={{ width: '100%', padding: 11 }} onClick={openAddCardSheet}>+ Add a card</button>
           </div>
         </div>
       )}

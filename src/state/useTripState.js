@@ -1,8 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   CARDS, FX, CITY_BY_DAY, CITY_CURRENCY, PLACES,
-  STOP_KIND_TO_CATEGORY, fmt,
+  STOP_KIND_TO_CATEGORY, EXPENSE_CATEGORIES, fmt,
 } from '../data/trip.js';
+
+// Rotates through the app's accent colors for user-added cards, since
+// there's no per-card art the way the seed data has hand-picked gradients.
+const CARD_SWATCHES = [
+  'linear-gradient(135deg,#c96f3f,#8f4826)',
+  'linear-gradient(135deg,#3f6f8f,#27455a)',
+  'linear-gradient(135deg,#6b8f5a,#42592f)',
+  'linear-gradient(135deg,#8a6a9f,#5c4570)',
+  'linear-gradient(135deg,#b08d4f,#7a5f35)',
+];
 
 /**
  * Per-trip UI state (tab, open sheet, filters, form fields) plus derived
@@ -63,6 +73,11 @@ export function useTripState(meta, onUpdateTrip) {
     bkRightValue: '',
     bkRightSub: '',
     bkNote: '',
+
+    // add-a-card sheet
+    newCardName: '',
+    newCardNumber: '',
+    newCategoryDraft: '', // typed-but-not-yet-saved custom expense category, shown as a pill immediately
   }));
 
   const patch = useCallback((next) => {
@@ -83,6 +98,7 @@ export function useTripState(meta, onUpdateTrip) {
     bkRef: '', bkWho: '', bkLeftLabel: 'Depart', bkLeftValue: '', bkLeftSub: '',
     bkRightLabel: 'Arrive', bkRightValue: '', bkRightSub: '', bkNote: '',
   }), [patch]);
+  const openAddCardSheet = useCallback(() => patch({ sheet: 'addcard', newCardName: '', newCardNumber: '' }), [patch]);
 
   // ---------- derived data (all sourced from the live `meta`) ----------
   // Defensive fallbacks throughout: `meta` should always come from rowToTrip
@@ -106,6 +122,25 @@ export function useTripState(meta, onUpdateTrip) {
     rows.forEach((c) => { m[c.cat] = (m[c.cat] || 0) + c.gbpN; });
     return m;
   }, [rows]);
+  const methodMap = useMemo(() => {
+    const m = {};
+    rows.forEach((c) => { m[c.method] = (m[c.method] || 0) + c.gbpN; });
+    return m;
+  }, [rows]);
+
+  // Custom categories aren't a separate stored list — any category a real
+  // expense was tagged with just becomes a selectable pill from then on.
+  // Combined with whatever's typed in the sheet right now (not saved yet)
+  // so a brand-new category shows up as a pill immediately, not just after
+  // the expense that uses it is actually added.
+  const categories = useMemo(() => {
+    const used = rows.map((r) => r.cat);
+    const draft = state.newCategoryDraft.trim();
+    return [...new Set([...EXPENSE_CATEGORIES, ...used, ...(draft ? [draft] : [])])];
+  }, [rows, state.newCategoryDraft]);
+
+  const customCards = meta.customCards || EMPTY_ARR;
+  const cards = useMemo(() => [...CARDS, ...customCards], [customCards]);
 
   const EMPTY_DAY = { short: '', label: '', tag: 'Empty', transit: [], parts: {}, overnight: '' };
   const day = days.length ? days[Math.min(state.day, days.length - 1)] : EMPTY_DAY;
@@ -121,13 +156,13 @@ export function useTripState(meta, onUpdateTrip) {
       amount,
       cur: state.expCur,
       method: state.payMethod === 'Credit'
-        ? (CARDS.find((c) => c.id === state.card)?.name || 'Credit')
+        ? (cards.find((c) => c.id === state.card)?.name || 'Credit')
         : state.payMethod,
     };
     onUpdateTrip({ extraCosts: [...extraCosts, entry] });
-    patch({ sheet: null });
+    patch({ sheet: null, newCategoryDraft: '' });
     return true;
-  }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.payMethod, state.card, extraCosts, onUpdateTrip, patch]);
+  }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.payMethod, state.card, cards, extraCosts, onUpdateTrip, patch]);
 
   const addActivity = useCallback(() => {
     if (!state.activityName.trim()) return false;
@@ -198,6 +233,27 @@ export function useTripState(meta, onUpdateTrip) {
     state.bkLeftLabel, state.bkLeftValue, state.bkLeftSub, state.bkRightLabel, state.bkRightValue, state.bkRightSub,
     state.bkNote, bookings, onUpdateTrip, patch]);
 
+  /** Adds a payment card — only ever keeps the last 4 digits, never the full number. */
+  const addCard = useCallback(() => {
+    const name = state.newCardName.trim();
+    const digits = state.newCardNumber.replace(/\D/g, '');
+    if (!name || digits.length < 4) return false;
+    const last4 = digits.slice(-4);
+    const entry = {
+      id: 'user-card-' + Date.now(),
+      name: `${name} ••${last4}`,
+      meta: '',
+      swatch: CARD_SWATCHES[customCards.length % CARD_SWATCHES.length],
+    };
+    onUpdateTrip({ customCards: [...customCards, entry] });
+    // Back to the expense sheet (the only place this opens from), with the
+    // new card already selected — sheets aren't a stack, so without this
+    // the in-progress expense (amount/description already typed) would be
+    // lost the moment "Add a card" closed.
+    patch({ sheet: 'expense', payMethod: 'Credit', card: entry.id, newCardName: '', newCardNumber: '' });
+    return true;
+  }, [state.newCardName, state.newCardNumber, customCards, onUpdateTrip, patch]);
+
   /**
    * Patches one field on one day within the trip's days array. Refuses to
    * write if `days` looks empty/out of range — days should never actually
@@ -226,7 +282,7 @@ export function useTripState(meta, onUpdateTrip) {
 
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
-    addExpense, addActivity, addBooking, updateOvernight, updateDayCity,
-    days, bookings, day, dayExtra, allCosts, rows, total, catMap, fmt,
+    openAddCardSheet, addExpense, addActivity, addBooking, addCard, updateOvernight, updateDayCity,
+    days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, fmt,
   };
 }
