@@ -142,6 +142,8 @@ export function useTripState(meta, onUpdateTrip) {
   const customCards = meta.customCards || EMPTY_ARR;
   const cards = useMemo(() => [...CARDS, ...customCards], [customCards]);
 
+  const todos = meta.todos || EMPTY_ARR;
+
   const EMPTY_DAY = { short: '', label: '', tag: 'Empty', transit: [], parts: {}, overnight: '' };
   const day = days.length ? days[Math.min(state.day, days.length - 1)] : EMPTY_DAY;
   const dayExtra = extraActivities[state.day] || {};
@@ -255,6 +257,29 @@ export function useTripState(meta, onUpdateTrip) {
   }, [state.newCardName, state.newCardNumber, customCards, onUpdateTrip, patch]);
 
   /**
+   * The to-do list — things to see/do/try/buy that aren't bookable and
+   * don't belong to any one day, so they live outside `days`/`bookings`
+   * entirely. `addTodo` returns false for an empty/whitespace-only text
+   * so the caller (an inline add row, not a full sheet) can skip clearing
+   * its input on a no-op submit.
+   */
+  const addTodo = useCallback((text, kind) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return false;
+    const entry = { id: 'todo-' + Date.now(), text: trimmed, kind: kind || 'Do', done: false };
+    onUpdateTrip({ todos: [...todos, entry] });
+    return true;
+  }, [todos, onUpdateTrip]);
+
+  const toggleTodo = useCallback((id) => {
+    onUpdateTrip({ todos: todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) });
+  }, [todos, onUpdateTrip]);
+
+  const removeTodo = useCallback((id) => {
+    onUpdateTrip({ todos: todos.filter((t) => t.id !== id) });
+  }, [todos, onUpdateTrip]);
+
+  /**
    * Patches one field on one day within the trip's days array. Refuses to
    * write if `days` looks empty/out of range — days should never actually
    * be empty for a real trip, but this is the one place that persists the
@@ -280,9 +305,17 @@ export function useTripState(meta, onUpdateTrip) {
    */
   const updateDayCity = useCallback((dayIndex, city) => updateDayField(dayIndex, 'city', city), [updateDayField]);
 
+  /** Moves the itinerary's selected day by `delta` days, clamped to the
+   * trip's actual range — shared by the day-rail chips, the prev/next
+   * buttons, and swiping left/right through the day detail. */
+  const goToDay = useCallback((delta) => {
+    patch((s) => ({ day: Math.min(Math.max(s.day + delta, 0), Math.max(days.length - 1, 0)) }));
+  }, [patch, days.length]);
+
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
-    openAddCardSheet, addExpense, addActivity, addBooking, addCard, updateOvernight, updateDayCity,
-    days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, fmt,
+    openAddCardSheet, addExpense, addActivity, addBooking, addCard, updateOvernight, updateDayCity, goToDay,
+    addTodo, toggleTodo, removeTodo,
+    days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, fmt,
   };
 }

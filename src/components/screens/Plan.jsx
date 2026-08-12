@@ -1,11 +1,56 @@
 import { useEffect, useRef, useState } from 'react';
 import { TERRA, CITY_BY_DAY, CITY_COORDS } from '../../data/trip.js';
 import { getDayParts } from '../../utils/dayParts.js';
-import { transitIcon } from '../../components/icons.jsx';
+import { transitIcon, ChevronLeftIcon } from '../../components/icons.jsx';
 import { useTripWeather } from '../../state/useTripWeather.js';
 import { weatherIcon } from '../../lib/weather.js';
 
 const KNOWN_CITIES = Object.values(CITY_COORDS).map((c) => c.label);
+
+// How far (px) and how much more horizontal-than-vertical a touch has to
+// travel before it counts as a day-swipe rather than the page just being
+// scrolled — keeps an ordinary vertical scroll from ever flipping the day.
+const SWIPE_MIN_DIST = 48;
+const SWIPE_DIRECTIONAL_RATIO = 1.4;
+
+/** Swipe left/right anywhere in this region to move a day at a time. */
+function useDaySwipe(onSwipe) {
+  const start = useRef(null);
+  // A real swipe still ends in a touchend over whatever happened to be
+  // under the finger — e.g. an activity card — and some browsers follow
+  // that up with a synthetic click. Without this, swiping across a card
+  // could both change the day *and* open it. One recognized swipe arms
+  // this for the click that immediately follows, if any; the timeout
+  // disarms it again on its own so an unrelated later tap is never
+  // affected if no such click actually shows up.
+  const suppressNextClick = useRef(false);
+  const suppressTimer = useRef(null);
+  return {
+    onTouchStart: (e) => {
+      const t = e.touches[0];
+      start.current = { x: t.clientX, y: t.clientY };
+    },
+    onTouchEnd: (e) => {
+      if (!start.current) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - start.current.x;
+      const dy = t.clientY - start.current.y;
+      start.current = null;
+      if (Math.abs(dx) < SWIPE_MIN_DIST || Math.abs(dx) < Math.abs(dy) * SWIPE_DIRECTIONAL_RATIO) return;
+      suppressNextClick.current = true;
+      clearTimeout(suppressTimer.current);
+      suppressTimer.current = setTimeout(() => { suppressNextClick.current = false; }, 500);
+      onSwipe(dx < 0 ? 1 : -1);
+    },
+    onClickCapture: (e) => {
+      if (!suppressNextClick.current) return;
+      suppressNextClick.current = false;
+      clearTimeout(suppressTimer.current);
+      e.preventDefault();
+      e.stopPropagation();
+    },
+  };
+}
 
 function tagColor(tag) {
   return tag === 'Empty' || tag === 'Open'
@@ -88,10 +133,11 @@ function dayHasContent(d, extra) {
 }
 
 export default function Plan({ trip }) {
-  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight, updateDayCity } = trip;
+  const { state, patch, meta, days, day, dayExtra, openAddStopSheet, updateOvernight, updateDayCity, goToDay } = trip;
   const railRef = useRef(null);
   const lastDay = useRef(null);
   const [showWxDetail, setShowWxDetail] = useState(false);
+  const swipeHandlers = useDaySwipe(goToDay);
 
   useEffect(() => {
     if (lastDay.current === state.day || !railRef.current) return;
@@ -114,7 +160,27 @@ export default function Plan({ trip }) {
       <div className="pad" style={{ paddingBottom: 0 }}>
         <h2 className="h2" style={{ marginBottom: 4 }}>Itinerary</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => goToDay(-1)}
+            disabled={state.day <= 0}
+            aria-label="Previous day"
+            style={{
+              border: 0, background: 'none', cursor: state.day <= 0 ? 'default' : 'pointer', padding: 4, margin: '0 -2px',
+              display: 'flex', color: state.day <= 0 ? 'var(--line-strong)' : 'var(--muted)',
+            }}
+          ><ChevronLeftIcon width={7} height={12} /></button>
           <span className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)' }}>{day.label}</span>
+          <button
+            type="button"
+            onClick={() => goToDay(1)}
+            disabled={state.day >= days.length - 1}
+            aria-label="Next day"
+            style={{
+              border: 0, background: 'none', cursor: state.day >= days.length - 1 ? 'default' : 'pointer', padding: 4, margin: '0 -2px',
+              display: 'flex', color: state.day >= days.length - 1 ? 'var(--line-strong)' : 'var(--muted)',
+            }}
+          ><ChevronLeftIcon width={7} height={12} style={{ transform: 'scaleX(-1)' }} /></button>
           <span
             className="mono"
             style={{ fontSize: 9, letterSpacing: '.1em', textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, background: tc.bg, color: tc.fg }}
@@ -208,6 +274,7 @@ export default function Plan({ trip }) {
         })}
       </div>
 
+      <div {...swipeHandlers} style={{ touchAction: 'pan-y' }}>
       <div className="pad" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {day.transit.map((t, i) => {
           const Icon = transitIcon(t);
@@ -308,6 +375,7 @@ export default function Plan({ trip }) {
           style={{ marginLeft: 52, width: 'calc(100% - 52px)', boxSizing: 'border-box', padding: 13 }}
           onClick={openAddStopSheet}
         >+ Add an activity</button>
+      </div>
       </div>
     </div>
   );

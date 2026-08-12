@@ -6,6 +6,7 @@ import Journey from './screens/Journey.jsx';
 import Costs from './screens/Costs.jsx';
 import Bookings from './screens/Bookings.jsx';
 import Calendar from './screens/Calendar.jsx';
+import Todo from './screens/Todo.jsx';
 import ExpenseSheet from './sheets/ExpenseSheet.jsx';
 import AddActivitySheet from './sheets/AddActivitySheet.jsx';
 import BookingSheet from './sheets/BookingSheet.jsx';
@@ -19,6 +20,7 @@ const TABS = [
   ['budget', 'Costs'],
   ['bookings', 'Bookings'],
   ['calendar', 'Calendar'],
+  ['todo', 'To-do'],
 ];
 
 /** The full single-trip experience — tab bar, screens and sheets — for one trip descriptor. */
@@ -35,6 +37,7 @@ export default function TripView({ meta, onBack, onUpdateTrip }) {
         {state.tab === 'budget' && <Costs trip={trip} />}
         {state.tab === 'bookings' && <Bookings trip={trip} />}
         {state.tab === 'calendar' && <Calendar trip={trip} />}
+        {state.tab === 'todo' && <Todo trip={trip} />}
       </div>
 
       <nav className="tabbar" aria-label="Primary">

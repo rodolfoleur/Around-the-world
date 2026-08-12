@@ -118,8 +118,19 @@ export function CalendarIcon(props) {
   );
 }
 
+export function ChecklistIcon(props) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" {...props}>
+      <path d="M3.5 5.3 5 6.8l2.3-2.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 10.7 5 12.2l2.3-2.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 16.1 5 17.6l2.3-2.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10.5 5.5h6M10.5 10.5h6M10.5 15.5h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export const PAY_ICONS = { Cash: CashIcon, Debit: DebitIcon, Credit: CreditIcon };
-export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon, calendar: CalendarIcon };
+export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon, calendar: CalendarIcon, todo: ChecklistIcon };
 
 export function SearchIcon(props) {
   return (

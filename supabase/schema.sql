@@ -48,6 +48,8 @@ create table trips (
   costs jsonb not null default '[]',
   extra_costs jsonb not null default '[]',
   extra_activities jsonb not null default '{}',
+  custom_cards jsonb not null default '[]',
+  todos jsonb not null default '[]',
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
