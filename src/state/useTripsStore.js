@@ -4,10 +4,15 @@ import { rowToTrip, tripToInsertRow, patchToRow, mergeRealtimeRow } from '../lib
 import { babymoonTrip, createEmptyTrip } from '../data/tripsRegistry.js';
 
 /**
- * The live, realtime-synced list of trips for a household. Every device
- * signed into the same household sees the same list — an insert/update
- * from any one of them arrives here as a Postgres Changes event and
- * updates local state, no polling.
+ * The live, realtime-synced list of trips visible to this user — every
+ * trip their household owns, *plus* any trip someone else shared with them
+ * individually via a trip-level invite (see join_trip/trip_shares). No
+ * household_id filter here on purpose: which trips come back is entirely
+ * up to the `trips` table's RLS policy (has_trip_access), so this always
+ * matches whatever the two access paths (household membership, trip
+ * share) actually allow — the same reason the realtime subscription below
+ * has no filter either, and instead relies on Realtime enforcing RLS per
+ * subscriber.
  */
 export function useTripsStore(householdId, userId) {
   const [trips, setTrips] = useState([]);
@@ -30,43 +35,48 @@ export function useTripsStore(householdId, userId) {
     setTrips((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const loadTrips = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('trips')
+      .select('*')
+      .order('start_date', { ascending: true });
+    if (error) { setLoading(false); return; }
+
+    if ((data || []).length === 0 && !seeded.current) {
+      // Brand-new household with nothing shared with them either — preload
+      // the one curated trip so there's something real to look at, exactly
+      // like the local-only build.
+      seeded.current = true;
+      const seed = tripToInsertRow(babymoonTrip(), householdId, userId);
+      const { data: inserted } = await supabase.from('trips').insert(seed).select().single();
+      if (inserted) setTrips([rowToTrip(inserted)]);
+    } else {
+      setTrips((data || []).map(rowToTrip));
+    }
+    setLoading(false);
+  }, [householdId, userId]);
+
   useEffect(() => {
     if (!householdId) return;
     let cancelled = false;
 
     (async () => {
-      const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('household_id', householdId)
-        .order('start_date', { ascending: true });
       if (cancelled) return;
-      if (error) { setLoading(false); return; }
-
-      if ((data || []).length === 0 && !seeded.current) {
-        // Brand-new household — preload the one curated trip so there's
-        // something real to look at, exactly like the local-only build.
-        seeded.current = true;
-        const seed = tripToInsertRow(babymoonTrip(), householdId, userId);
-        const { data: inserted } = await supabase.from('trips').insert(seed).select().single();
-        if (inserted && !cancelled) setTrips([rowToTrip(inserted)]);
-      } else {
-        setTrips((data || []).map(rowToTrip));
-      }
-      setLoading(false);
+      await loadTrips();
     })();
 
     const channel = supabase
-      .channel(`trips-${householdId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trips', filter: `household_id=eq.${householdId}` },
+      .channel(`trips-${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trips' },
         (payload) => upsertLocal(payload.new))
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips', filter: `household_id=eq.${householdId}` },
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips' },
         (payload) => upsertLocal(payload.new))
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'trips', filter: `household_id=eq.${householdId}` },
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'trips' },
         (payload) => removeLocal(payload.old.id))
       .subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [householdId, userId, upsertLocal, removeLocal]);
 
   const createTrip = useCallback(async (fields) => {
@@ -107,5 +117,21 @@ export function useTripsStore(householdId, userId) {
     }
   }, []);
 
-  return { trips, loading, createTrip, updateTrip, saveError, clearSaveError };
+  /**
+   * Redeems a trip-level invite code (see join_trip in schema.sql) — grants
+   * access to exactly one trip, never the inviter's household or their
+   * other trips. Joining a trip doesn't touch the `trips` row itself (only
+   * trip_shares), so there's no INSERT/UPDATE event for realtime to push —
+   * an explicit reload is what actually makes the newly-shared trip show up.
+   */
+  const joinTrip = useCallback(async (inviteCode, displayName) => {
+    const { error } = await supabase.rpc('join_trip', {
+      invite_code: inviteCode.trim().toLowerCase(), display_name: displayName,
+    });
+    if (error) return { ok: false, error: error.message };
+    await loadTrips();
+    return { ok: true };
+  }, [loadTrips]);
+
+  return { trips, loading, createTrip, updateTrip, saveError, clearSaveError, joinTrip };
 }

@@ -50,42 +50,66 @@ function TripCard({ trip, onOpen }) {
   );
 }
 
-function InviteRow({ household, members, onSignOut }) {
-  const [copied, setCopied] = useState(false);
-  const others = members.length;
+/**
+ * Sharing lives per-trip now (see the "Invite" button inside each trip),
+ * not at the account/household level — this row is just "redeem a code
+ * someone gave you" plus the sign-out control that used to live in the old
+ * household InviteRow.
+ */
+function JoinTripRow({ onJoinTrip, onSignOut }) {
+  const [joining, setJoining] = useState(false);
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(household.inviteCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard unavailable — the code is still visible to copy by hand */
-    }
+  const submit = async () => {
+    if (!code.trim()) return;
+    setBusy(true);
+    setError('');
+    const res = await onJoinTrip(code, name.trim() || 'Me');
+    setBusy(false);
+    if (res.ok) { setJoining(false); setCode(''); setName(''); }
+    else setError(res.error || "That code didn't work.");
   };
 
   return (
-    <div className="card" style={{ padding: '13px 15px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-          {others > 1 ? `${others} people share this household` : 'Just you so far'}
+    <div className="card" style={{ padding: '13px 15px', marginBottom: 24 }}>
+      {!joining ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, fontSize: 12.5, color: 'var(--muted)' }}>Been invited to someone else&rsquo;s trip?</div>
+          <button type="button" className="btn-outline" style={{ padding: '9px 12px', fontSize: 10, flex: 'none' }} onClick={() => setJoining(true)}>
+            + Join a trip
+          </button>
+          <button type="button" className="mono" style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--muted-3)', flex: 'none' }} onClick={onSignOut}>
+            Sign out
+          </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 3 }}>
-          <span className="mono" style={{ fontSize: 9.5, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>Invite code</span>
-          <span className="mono" style={{ fontSize: 14, fontWeight: 600 }}>{household.inviteCode}</span>
-        </div>
-      </div>
-      <button type="button" className="btn-outline" style={{ padding: '9px 12px', fontSize: 10 }} onClick={copy}>
-        {copied ? 'Copied' : 'Copy'}
-      </button>
-      <button type="button" className="mono" style={{ border: 0, background: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--muted-3)' }} onClick={onSignOut}>
-        Sign out
-      </button>
+      ) : (
+        <>
+          <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 10 }}>
+            Join a trip
+          </div>
+          <div style={{ display: 'flex', gap: 7, marginBottom: 10 }}>
+            <input type="text" placeholder="Invite code" value={code} onChange={(e) => setCode(e.target.value)} style={{ flex: 1 }} />
+            <input type="text" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} style={{ flex: 1 }} />
+          </div>
+          {error && <div style={{ fontSize: 11.5, color: 'var(--terra)', marginBottom: 8 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 7 }}>
+            <button type="button" className="btn-dark" style={{ flex: 1, padding: 11, fontSize: 10.5 }} onClick={submit} disabled={busy || !code.trim()}>
+              {busy ? 'Joining…' : 'Join'}
+            </button>
+            <button type="button" className="btn-outline" style={{ flex: 'none', padding: '0 16px', fontSize: 10.5 }} onClick={() => setJoining(false)} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-export default function TripsHome({ trips, onOpen, onCreate, household, members, onSignOut }) {
+export default function TripsHome({ trips, onOpen, onCreate, members, onSignOut, onJoinTrip }) {
   const [showCreate, setShowCreate] = useState(false);
   const [tried, setTried] = useState(false);
   const defaultWho = members.map((m) => m.display_name).join(', ');
@@ -167,7 +191,7 @@ export default function TripsHome({ trips, onOpen, onCreate, household, members,
         {trips.length} trip{trips.length === 1 ? '' : 's'} · {upcoming.length} upcoming
       </div>
 
-      {household && <InviteRow household={household} members={members} onSignOut={onSignOut} />}
+      <JoinTripRow onJoinTrip={onJoinTrip} onSignOut={onSignOut} />
 
       <h3 className="h3" style={{ marginBottom: 12 }}>Upcoming</h3>
       {upcoming.length === 0 ? (

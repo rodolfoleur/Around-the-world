@@ -9,7 +9,7 @@ const LAST_OPEN_KEY = 'voyager-last-open-trip';
 
 /** Mounted once auth + household are ready — owns the live trips list for that household. */
 function HouseholdApp({ auth }) {
-  const { trips, loading, createTrip, updateTrip, saveError, clearSaveError } = useTripsStore(auth.household.householdId, auth.user.id);
+  const { trips, loading, createTrip, updateTrip, saveError, clearSaveError, joinTrip } = useTripsStore(auth.household.householdId, auth.user.id);
   const [activeTripId, setActiveTripId] = useState(() => {
     try { return window.localStorage.getItem(LAST_OPEN_KEY); } catch { return null; }
   });
@@ -61,9 +61,9 @@ function HouseholdApp({ auth }) {
         trips={trips}
         onOpen={setActiveTripId}
         onCreate={createTrip}
-        household={auth.household}
         members={auth.members}
         onSignOut={auth.signOut}
+        onJoinTrip={joinTrip}
       />
     </div>
   );

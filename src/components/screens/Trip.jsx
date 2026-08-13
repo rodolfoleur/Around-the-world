@@ -86,18 +86,29 @@ export default function Trip({ trip, onBack }) {
         <h2 style={{ fontWeight: 700, letterSpacing: '-.03em', fontSize: 30, lineHeight: 1.08, textWrap: 'balance' }}>
           {meta.title}
         </h2>
-        <span style={{ display: 'flex', flexDirection: 'row-reverse', marginTop: 6 }}>
-          {meta.travelers.map((p) => (
-            <span
-              key={p.name}
-              title={p.name}
-              style={{
-                width: 31, height: 31, borderRadius: 999, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: 11.5, fontWeight: 600, color: 'var(--bone)',
-                border: '2px solid var(--bone)', marginRight: -10, background: p.color,
-              }}
-            >{p.initial}</span>
-          ))}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+          <button
+            type="button"
+            className="mono"
+            onClick={() => trip.patch({ sheet: 'invite' })}
+            style={{
+              border: '1px solid var(--line-strong)', background: '#fff', borderRadius: 99, cursor: 'pointer',
+              padding: '6px 12px', fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)',
+            }}
+          >Invite</button>
+          <span style={{ display: 'flex', flexDirection: 'row-reverse', marginTop: 6 }}>
+            {meta.travelers.map((p) => (
+              <span
+                key={p.name}
+                title={p.name}
+                style={{
+                  width: 31, height: 31, borderRadius: 999, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: 11.5, fontWeight: 600, color: 'var(--bone)',
+                  border: '2px solid var(--bone)', marginRight: -10, background: p.color,
+                }}
+              >{p.initial}</span>
+            ))}
+          </span>
         </span>
       </div>
 

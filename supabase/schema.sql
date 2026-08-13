@@ -56,6 +56,27 @@ create table trips (
   updated_at timestamptz not null default now()
 );
 
+-- Trip-level sharing, additive to the household model above: a household
+-- is still the boundary for trips *you* create, but sharing one specific
+-- trip with someone else doesn't require adding them to your whole
+-- household — they redeem a trip-scoped invite code instead, and only
+-- ever see that one trip, not any of your others.
+create table trip_shares (
+  trip_id uuid not null references trips(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null,
+  color text not null,
+  joined_at timestamptz not null default now(),
+  primary key (trip_id, user_id)
+);
+
+create table trip_invites (
+  code text primary key,
+  trip_id uuid not null references trips(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '30 days'
+);
+
 -- Without this, Postgres's logical replication (what Supabase Realtime
 -- rides on) is allowed to omit an unchanged jsonb column's value entirely
 -- from an UPDATE event once that column is stored TOASTed out-of-line —
@@ -166,6 +187,101 @@ end;
 $$ language plpgsql security definer;
 
 -- ---------------------------------------------------------------------
+-- Trip-level sharing: invite one person to one trip, not your household.
+-- ---------------------------------------------------------------------
+
+-- True if the current user can see/edit this trip — either via their
+-- household (the original model, above) or a trip-specific share. Kept as
+-- its own security definer function (rather than inlined in each policy)
+-- so trips/trip_shares' RLS and every RPC below agree on exactly one
+-- definition of "has access."
+create or replace function has_trip_access(tid uuid) returns boolean as $$
+  select exists (
+    select 1 from trips t
+    where t.id = tid
+      and (
+        is_household_member(t.household_id)
+        or exists (select 1 from trip_shares ts where ts.trip_id = tid and ts.user_id = auth.uid())
+      )
+  );
+$$ language sql stable security definer;
+
+-- Reuses any still-valid code for this trip rather than minting a new one
+-- every time the invite panel opens — same pattern as my_household().
+create or replace function get_trip_invite(target_trip_id uuid)
+returns text as $$
+declare
+  code text;
+begin
+  if not has_trip_access(target_trip_id) then
+    raise exception 'You do not have access to this trip.';
+  end if;
+
+  select trip_invites.code into code
+    from trip_invites
+    where trip_invites.trip_id = target_trip_id and expires_at > now()
+    order by created_at desc limit 1;
+
+  if code is null then
+    code := encode(gen_random_bytes(4), 'hex');
+    insert into trip_invites (code, trip_id) values (code, target_trip_id);
+  end if;
+
+  return code;
+end;
+$$ language plpgsql security definer;
+
+-- Redeeming a trip invite only ever grants access to that one trip —
+-- never the inviter's household or any of their other trips.
+create or replace function join_trip(invite_code text, display_name text)
+returns uuid as $$
+declare
+  target_trip_id uuid;
+  assigned_color text;
+begin
+  select trip_id into target_trip_id
+    from trip_invites
+    where code = invite_code and expires_at > now();
+
+  if target_trip_id is null then
+    raise exception 'That invite code is invalid or has expired.';
+  end if;
+
+  assigned_color := (array['#c96f3f','#3f6f8f','#6b8f5a','#8a6a9f','#b08d4f'])[
+    (select count(*) from trip_shares where trip_id = target_trip_id) % 5 + 1
+  ];
+
+  insert into trip_shares (trip_id, user_id, display_name, color)
+    values (target_trip_id, auth.uid(), display_name, assigned_color)
+    on conflict (trip_id, user_id) do update set display_name = excluded.display_name;
+
+  return target_trip_id;
+end;
+$$ language plpgsql security definer;
+
+-- Combined "who has access to this trip" for the trip's own Invite panel —
+-- household members plus trip_shares, tagged so the UI can label each.
+create or replace function trip_access_list(target_trip_id uuid)
+returns table(user_id uuid, display_name text, color text, via text) as $$
+declare
+  hid uuid;
+begin
+  if not has_trip_access(target_trip_id) then
+    raise exception 'You do not have access to this trip.';
+  end if;
+
+  select trips.household_id into hid from trips where trips.id = target_trip_id;
+
+  return query
+    select hm.user_id, hm.display_name, hm.color, 'household'::text
+    from household_members hm where hm.household_id = hid
+    union all
+    select ts.user_id, ts.display_name, ts.color, 'shared'::text
+    from trip_shares ts where ts.trip_id = target_trip_id;
+end;
+$$ language plpgsql security definer;
+
+-- ---------------------------------------------------------------------
 -- Row Level Security
 -- ---------------------------------------------------------------------
 
@@ -173,6 +289,8 @@ alter table households enable row level security;
 alter table household_members enable row level security;
 alter table household_invites enable row level security;
 alter table trips enable row level security;
+alter table trip_shares enable row level security;
+alter table trip_invites enable row level security;
 
 create policy "members can see their own household row"
   on households for select
@@ -182,23 +300,31 @@ create policy "members can see other members of their household"
   on household_members for select
   using (is_household_member(household_id));
 
--- no direct insert/update/delete policies on household_members or
--- households/household_invites: all writes go through the security
--- definer RPCs above, which is deliberate — keeps the client from
--- being able to add itself to an arbitrary household directly.
+-- no direct insert/update/delete policies on household_members,
+-- households, household_invites, trip_shares, or trip_invites: all writes
+-- to these go through the security definer RPCs above, which is
+-- deliberate — keeps the client from adding itself to an arbitrary
+-- household or trip directly.
 
-create policy "members can read their household's trips"
+create policy "trip members can see their trip's shares"
+  on trip_shares for select
+  using (has_trip_access(trip_id));
+
+create policy "trip access: select"
   on trips for select
-  using (is_household_member(household_id));
+  using (has_trip_access(id));
 
 create policy "members can add trips to their household"
   on trips for insert
   with check (is_household_member(household_id));
 
-create policy "members can update their household's trips"
+-- Update is intentionally broader than insert/delete: a trip-shared
+-- collaborator can help plan/edit the trip they were invited to, but only
+-- the owning household can create or delete trips outright.
+create policy "trip access: update"
   on trips for update
-  using (is_household_member(household_id))
-  with check (is_household_member(household_id));
+  using (has_trip_access(id))
+  with check (has_trip_access(id));
 
 create policy "members can delete their household's trips"
   on trips for delete
