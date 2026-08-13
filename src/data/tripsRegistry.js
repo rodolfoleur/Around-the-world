@@ -30,6 +30,8 @@ export function babymoonTrip() {
     customCards: [],
     todos: [],
     photos: {},
+    roadTrip: false,
+    journeyLegs: [],
   };
 }
 
@@ -83,5 +85,7 @@ export function createEmptyTrip({ title, startDate, endDate, travelersText, rout
     customCards: [],
     todos: [],
     photos: {},
+    roadTrip: false,
+    journeyLegs: [],
   };
 }

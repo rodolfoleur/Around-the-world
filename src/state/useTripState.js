@@ -32,12 +32,12 @@ const EMPTY_OBJ = {};
 export function useTripState(meta, onUpdateTrip) {
   // Always-current mirror of the latest `meta` prop, so a mutator that
   // merges against an existing array/object field (photos, expense method,
-  // etc.) reads the freshest value instead of whatever a stale useCallback
-  // closure captured. Without this, two writes to the same field fired
-  // close together (two auto photo lookups resolving near-simultaneously,
-  // or an expense-method edit landing in the same render window as another
-  // change) can each merge against the same outdated snapshot and clobber
-  // one another. Assigning during render is intentional and safe here — it
+  // road-trip legs, etc.) reads the freshest value instead of whatever a
+  // stale useCallback closure captured. Without this, two writes to the
+  // same field fired close together (two auto photo lookups resolving
+  // near-simultaneously, or two edits landing in the same render window)
+  // can each merge against the same outdated snapshot and clobber one
+  // another. Assigning during render is intentional and safe here — it
   // never drives what gets rendered, it just keeps the ref current for the
   // next callback invocation.
   const metaRef = useRef(meta);
@@ -51,6 +51,12 @@ export function useTripState(meta, onUpdateTrip) {
     bFilter: 'All',
     legFilter: 'All',
     journeyFocusLeg: null,
+
+    // road-trip "+ add a leg" form
+    legFrom: '',
+    legTo: '',
+    legDate: '',
+    legNotes: '',
 
     // add-a-cost sheet
     expDesc: '',
@@ -168,6 +174,18 @@ export function useTripState(meta, onUpdateTrip) {
 
   const todos = meta.todos || EMPTY_ARR;
   const photos = meta.photos || EMPTY_OBJ;
+
+  const roadTrip = meta.roadTrip || false;
+  // Soft-deleted the same way bookings are — no other code references a
+  // journey leg by array position, but a real "delete the last leg" write
+  // would make this column go genuinely empty, and Supabase Realtime can't
+  // tell that apart from a large jsonb column just not being included in a
+  // particular change payload (see mergeRealtimeRow's TOAST note). Filtering
+  // out `deleted` ones here sidesteps that ambiguity entirely.
+  const journeyLegs = useMemo(
+    () => (meta.journeyLegs || EMPTY_ARR).filter((l) => !l.deleted),
+    [meta.journeyLegs],
+  );
 
   const EMPTY_DAY = { short: '', label: '', tag: 'Empty', transit: [], parts: {}, overnight: '' };
   const day = days.length ? days[Math.min(state.day, days.length - 1)] : EMPTY_DAY;
@@ -355,6 +373,33 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ photos: { ...metaRef.current.photos, ...entries } });
   }, [onUpdateTrip]);
 
+  /** On for a self-driven trip with nothing to auto-populate Journey from
+   * (no flight/car-rental bookings) — swaps the tab into manual leg entry. */
+  const toggleRoadTrip = useCallback(() => {
+    onUpdateTrip({ roadTrip: !metaRef.current.roadTrip });
+  }, [onUpdateTrip]);
+
+  /** Appends one manually-entered leg. Geocoding (if any) already happened
+   * by the time this is called — see AddLegForm in Journey.jsx — so this is
+   * just the write, reading the base array from metaRef so it can't lose a
+   * leg added moments earlier that hasn't rendered through yet. */
+  const addJourneyLeg = useCallback((leg) => {
+    const arr = metaRef.current.journeyLegs || EMPTY_ARR;
+    onUpdateTrip({ journeyLegs: [...arr, { id: 'leg-' + Date.now(), ...leg }] });
+  }, [onUpdateTrip]);
+
+  /** Corrects one field on an existing leg — the km after a bad geocode, a
+   * typo'd place name, notes — without touching any other leg. */
+  const updateJourneyLeg = useCallback((id, patch) => {
+    const arr = metaRef.current.journeyLegs || EMPTY_ARR;
+    onUpdateTrip({ journeyLegs: arr.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
+  }, [onUpdateTrip]);
+
+  const deleteJourneyLeg = useCallback((id) => {
+    const arr = metaRef.current.journeyLegs || EMPTY_ARR;
+    onUpdateTrip({ journeyLegs: arr.map((l) => (l.id === id ? { ...l, deleted: true } : l)) });
+  }, [onUpdateTrip]);
+
   /**
    * Patches one field on one day within the trip's days array. Refuses to
    * write if `days` looks empty/out of range — days should never actually
@@ -392,6 +437,8 @@ export function useTripState(meta, onUpdateTrip) {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
     openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
     addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos, updateExpenseMethod,
+    toggleRoadTrip, addJourneyLeg, updateJourneyLeg, deleteJourneyLeg,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
+    roadTrip, journeyLegs,
   };
 }
