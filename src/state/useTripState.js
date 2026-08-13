@@ -59,7 +59,7 @@ export function useTripState(meta, onUpdateTrip) {
     expCat: 'Meals',
     expDate: new Date().toISOString().slice(0, 10),
     payMethod: 'Credit',
-    card: 'visa',
+    card: '', // no built-in default now that CARDS starts empty — set once a real card exists
 
     // add-an-activity sheet
     activityName: '',

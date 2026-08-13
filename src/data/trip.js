@@ -355,11 +355,13 @@ export const LEGS = [
   { n: '11', from: 'MEX', to: 'SJD', sub: 'Aeroméxico AM382 · Business', when: 'Sep 6', type: 'Flight', bk: 10 },
 ];
 
-export const CARDS = [
-  { id: 'visa', name: 'Visa ••4417', meta: 'Joint · no foreign fee', swatch: 'linear-gradient(135deg,#3f6f8f,#27455a)' },
-  { id: 'amex', name: 'Amex ••1006', meta: 'Rodolfo · points on travel', swatch: 'linear-gradient(135deg,#c9c2b4,#8a8377)' },
-  { id: 'mc', name: 'Mastercard ••8802', meta: 'Kirsten · cashback', swatch: 'linear-gradient(135deg,#c96f3f,#8f4826)' },
-];
+// No built-in cards — the three that used to live here (Visa/Amex/
+// Mastercard with made-up last-4s) were placeholder demo content, not real
+// cards on the account. Every card shown in the app now comes from
+// customCards, added for real via "+ Add a card". Existing expense entries
+// that still say e.g. "Visa ••4417" are just text on that entry — fix them
+// from Expenses by tapping the method tag, same as any other correction.
+export const CARDS = [];
 
 export const CITY_BY_DAY = ['MEX', 'LON', 'LON', 'AUT', 'AUT', 'AUT', 'AUT', 'LON', 'LON', 'LON', 'LON', 'LON', 'LON', 'LON', 'MEX', 'MEX', 'CAB'];
 
