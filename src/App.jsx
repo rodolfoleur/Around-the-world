@@ -9,7 +9,7 @@ const LAST_OPEN_KEY = 'voyager-last-open-trip';
 
 /** Mounted once auth + household are ready — owns the live trips list for that household. */
 function HouseholdApp({ auth }) {
-  const { trips, loading, createTrip, updateTrip, saveError, clearSaveError, joinTrip } = useTripsStore(auth.household.householdId, auth.user.id);
+  const { trips, loading, createTrip, updateTrip, deleteTrip, saveError, clearSaveError, joinTrip } = useTripsStore(auth.household.householdId, auth.user.id);
   const [activeTripId, setActiveTripId] = useState(() => {
     try { return window.localStorage.getItem(LAST_OPEN_KEY); } catch { return null; }
   });
@@ -38,6 +38,16 @@ function HouseholdApp({ auth }) {
 
   const meta = activeTripId ? trips.find((t) => t.id === activeTripId) : null;
 
+  // Only navigates back to the trips list once the delete actually
+  // succeeded — a permission failure (a shared collaborator trying to
+  // delete a trip they don't own) leaves you right where you were, with
+  // the real reason surfaced inline instead of silently bouncing you out.
+  const handleDeleteTrip = async () => {
+    const res = await deleteTrip(meta.id);
+    if (res.ok) setActiveTripId(null);
+    return res;
+  };
+
   if (meta) {
     return (
       <>
@@ -48,6 +58,7 @@ function HouseholdApp({ auth }) {
             meta={meta}
             onBack={() => setActiveTripId(null)}
             onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
+            onDeleteTrip={handleDeleteTrip}
           />
         </ErrorBoundary>
       </>

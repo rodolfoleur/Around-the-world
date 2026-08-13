@@ -118,6 +118,23 @@ export function useTripsStore(householdId, userId) {
   }, []);
 
   /**
+   * Deletes a trip outright — the trip row plus everything embedded in it
+   * (days/bookings/costs/journey legs/etc., all stored on that one row).
+   * RLS only lets the owning household do this (trip_shares collaborators
+   * can edit but not delete — see "trips: delete" in schema.sql), so a
+   * shared trip's delete request quietly matches zero rows rather than
+   * erroring; `.select()` on the delete is what lets us tell the two apart
+   * and surface a real error instead of the button silently doing nothing.
+   */
+  const deleteTrip = useCallback(async (tripId) => {
+    const { data, error } = await supabase.from('trips').delete().eq('id', tripId).select('id');
+    if (error) return { ok: false, error: error.message };
+    if (!data || data.length === 0) return { ok: false, error: "You don't have permission to delete this trip." };
+    removeLocal(tripId); // don't wait for the realtime echo
+    return { ok: true };
+  }, [removeLocal]);
+
+  /**
    * Redeems a trip-level invite code (see join_trip in schema.sql) — grants
    * access to exactly one trip, never the inviter's household or their
    * other trips. Joining a trip doesn't touch the `trips` row itself (only
@@ -133,5 +150,5 @@ export function useTripsStore(householdId, userId) {
     return { ok: true };
   }, [loadTrips]);
 
-  return { trips, loading, createTrip, updateTrip, saveError, clearSaveError, joinTrip };
+  return { trips, loading, createTrip, updateTrip, deleteTrip, saveError, clearSaveError, joinTrip };
 }

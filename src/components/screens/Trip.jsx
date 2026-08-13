@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CAT_COLOR, TERRA } from '../../data/trip.js';
 import { tripClock, formatRange } from '../../utils/dates.js';
 import { getDayParts } from '../../utils/dayParts.js';
@@ -35,7 +36,69 @@ function nextBookingIdx(nextDay, bookings) {
   return -1;
 }
 
-export default function Trip({ trip, onBack }) {
+/** Deletes the whole trip row — everything embedded in it (days, bookings,
+ * costs, journey legs, all of it) goes with it, for every device/person
+ * with access. Tap-twice-to-confirm like the other destructive actions in
+ * the app, but with an explicit warning too, since this is a much bigger
+ * blast radius than deleting one entry. RLS only lets the owning household
+ * actually do this — a permission failure comes back as a real error here
+ * rather than the button just doing nothing. */
+function DeleteTripSection({ onDeleteTrip, title }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleClick = async () => {
+    if (!confirming) { setConfirming(true); return; }
+    setBusy(true);
+    setError('');
+    const res = await onDeleteTrip();
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error || 'Could not delete this trip.');
+      setConfirming(false);
+    }
+    // on success the app navigates back to the trips list — nothing left to render here
+  };
+
+  return (
+    <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid var(--wash-2)' }}>
+      {confirming && (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 10, maxWidth: 440 }}>
+          This deletes &ldquo;{title}&rdquo; and everything in it — days, bookings, expenses, journey — for everyone
+          with access. This can&rsquo;t be undone.
+        </div>
+      )}
+      {error && <div style={{ fontSize: 12, color: 'var(--terra)', marginBottom: 10 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <button
+          type="button"
+          className="mono"
+          onClick={handleClick}
+          disabled={busy}
+          style={{
+            border: '1px solid var(--line)', background: 'none', borderRadius: 10, cursor: 'pointer',
+            padding: '9px 14px', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--terra)',
+          }}
+        >
+          {busy ? 'Deleting…' : confirming ? 'Tap again to permanently delete this trip' : 'Delete trip'}
+        </button>
+        {confirming && !busy && (
+          <button
+            type="button"
+            className="mono"
+            onClick={() => setConfirming(false)}
+            style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted-3)' }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function Trip({ trip, onBack, onDeleteTrip }) {
   const { meta, days, bookings, go, openBooking, total, rows, catMap, fmt } = trip;
   const visibleBookings = bookings.filter((b) => !b.deleted);
 
@@ -234,6 +297,8 @@ export default function Trip({ trip, onBack }) {
           </div>
         )}
       </div>
+
+      {onDeleteTrip && <DeleteTripSection onDeleteTrip={onDeleteTrip} title={meta.title} />}
     </div>
   );
 }

@@ -25,14 +25,14 @@ const TABS = [
 ];
 
 /** The full single-trip experience — tab bar, screens and sheets — for one trip descriptor. */
-export default function TripView({ meta, onBack, onUpdateTrip }) {
+export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip }) {
   const trip = useTripState(meta, onUpdateTrip);
   const { state, go, closeSheet } = trip;
 
   return (
     <>
       <div className="app-screen">
-        {state.tab === 'home' && <Trip trip={trip} onBack={onBack} />}
+        {state.tab === 'home' && <Trip trip={trip} onBack={onBack} onDeleteTrip={onDeleteTrip} />}
         {state.tab === 'plan' && <Plan trip={trip} />}
         {state.tab === 'map' && <Journey trip={trip} />}
         {state.tab === 'budget' && <Costs trip={trip} />}
