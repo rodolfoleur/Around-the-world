@@ -10,8 +10,11 @@ const BASE_METHODS = ['Cash', 'Debit'];
 /** Lets you fix an entry's payment method after the fact — a wrong pick at
  * add-time, or a card that's since been replaced with a real one, shouldn't
  * be stuck that way forever. Opens inline under the row it belongs to,
- * same pattern as the location strip's "Change photo". */
-function MethodPicker({ current, cards, onSet, onClose, onAddCard }) {
+ * same pattern as the location strip's "Change photo" — and bundles
+ * delete in the same panel (tap twice to confirm), rather than a separate
+ * affordance competing for space on an already-tight row. */
+function MethodPicker({ current, cards, onSet, onClose, onAddCard, onDelete }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   return (
     <div className="card" style={{ padding: 10, margin: '4px 0 10px' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: cards.length ? 8 : 0 }}>
@@ -32,7 +35,7 @@ function MethodPicker({ current, cards, onSet, onClose, onAddCard }) {
           >{c.name}</button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
         <button type="button" className="mono" style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted-3)' }} onClick={onAddCard}>
           + Add a new card
         </button>
@@ -40,11 +43,22 @@ function MethodPicker({ current, cards, onSet, onClose, onAddCard }) {
           Cancel
         </button>
       </div>
+      <button
+        type="button"
+        className="mono"
+        style={{
+          width: '100%', border: '1px solid var(--line)', borderRadius: 10, background: 'none', cursor: 'pointer',
+          padding: '8px 0', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--terra)',
+        }}
+        onClick={() => (confirmingDelete ? onDelete() : setConfirmingDelete(true))}
+      >
+        {confirmingDelete ? 'Tap again to delete this expense' : 'Delete this expense'}
+      </button>
     </div>
   );
 }
 
-function EntryRow({ r, cards, onSetMethod, onAddCard }) {
+function EntryRow({ r, cards, onSetMethod, onAddCard, onDelete }) {
   const [editing, setEditing] = useState(false);
   return (
     <div>
@@ -83,6 +97,7 @@ function EntryRow({ r, cards, onSetMethod, onAddCard }) {
           onSet={(m) => onSetMethod(r.source, r.srcIdx, m)}
           onClose={() => setEditing(false)}
           onAddCard={onAddCard}
+          onDelete={() => { onDelete(r.source, r.srcIdx); setEditing(false); }}
         />
       )}
     </div>
@@ -90,7 +105,7 @@ function EntryRow({ r, cards, onSetMethod, onAddCard }) {
 }
 
 export default function Costs({ trip }) {
-  const { rows, total, catMap, methodMap, fmt, openExpenseSheet, cards, updateExpenseMethod, openAddCardSheet } = trip;
+  const { rows, total, catMap, methodMap, fmt, openExpenseSheet, cards, updateExpenseMethod, deleteExpense, openAddCardSheet } = trip;
 
   const catList = Object.keys(catMap)
     .map((k) => ({ label: k, n: catMap[k], color: CAT_COLOR[k] || '#a09889' }))
@@ -179,6 +194,7 @@ export default function Costs({ trip }) {
                 cards={cards}
                 onSetMethod={updateExpenseMethod}
                 onAddCard={openAddCardSheet}
+                onDelete={deleteExpense}
               />
             ))}
           </div>

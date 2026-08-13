@@ -141,10 +141,18 @@ export function useTripState(meta, onUpdateTrip) {
   // from the flattened/sorted list in the UI can be written back to the
   // right place — a payment method picked wrong (or a card that's since
   // been replaced) should stay correctable long after the entry was added.
+  // Index tagged against the *full* underlying array (before filtering),
+  // so a deleted entry's still-visible siblings keep pointing at their real
+  // position — then `deleted` ones are dropped from what's actually shown.
+  // Soft-deleted (not spliced) for the same reason journey legs are: a
+  // real "delete the trip's only expense" write would make this column go
+  // genuinely empty, which Realtime can't tell apart from an unchanged
+  // large jsonb column being left out of a payload (see mergeRealtimeRow's
+  // TOAST note) — filtering here instead of removing sidesteps that.
   const allCosts = useMemo(() => [
     ...costs.map((c, i) => ({ ...c, source: 'costs', srcIdx: i })),
     ...extraCosts.map((c, i) => ({ ...c, source: 'extraCosts', srcIdx: i })),
-  ], [costs, extraCosts]);
+  ].filter((c) => !c.deleted), [costs, extraCosts]);
   const rows = useMemo(() => allCosts.map((c) => ({ ...c, gbpN: c.amount / (FX[c.cur] || 1) })), [allCosts]);
   const total = useMemo(() => rows.reduce((a, c) => a + c.gbpN, 0), [rows]);
   const catMap = useMemo(() => {
@@ -220,6 +228,14 @@ export function useTripState(meta, onUpdateTrip) {
   const updateExpenseMethod = useCallback((source, idx, method) => {
     const arr = metaRef.current[source] || EMPTY_ARR;
     onUpdateTrip({ [source]: arr.map((c, i) => (i === idx ? { ...c, method } : c)) });
+  }, [onUpdateTrip]);
+
+  /** Removes an expense — logged twice, added by mistake, whatever the
+   * reason. Soft-delete (see allCosts' filter, above) rather than a real
+   * splice, same `source`/`idx` addressing as updateExpenseMethod. */
+  const deleteExpense = useCallback((source, idx) => {
+    const arr = metaRef.current[source] || EMPTY_ARR;
+    onUpdateTrip({ [source]: arr.map((c, i) => (i === idx ? { ...c, deleted: true } : c)) });
   }, [onUpdateTrip]);
 
   const addActivity = useCallback(() => {
@@ -436,7 +452,7 @@ export function useTripState(meta, onUpdateTrip) {
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
     openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
-    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos, updateExpenseMethod,
+    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos, updateExpenseMethod, deleteExpense,
     toggleRoadTrip, addJourneyLeg, updateJourneyLeg, deleteJourneyLeg,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
     roadTrip, journeyLegs,
