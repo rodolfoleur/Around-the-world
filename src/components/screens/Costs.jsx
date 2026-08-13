@@ -1,12 +1,96 @@
+import { useState } from 'react';
 import { CAT_COLOR } from '../../data/trip.js';
 
 // Payment methods don't have hand-picked colors like categories do — rotate
 // through a small palette keyed by first appearance, so it's at least
 // consistent within one trip's breakdown.
 const METHOD_PALETTE = ['#c96f3f', '#3f6f8f', '#6b8f5a', '#8a6a9f', '#b08d4f', '#a09889'];
+const BASE_METHODS = ['Cash', 'Debit'];
+
+/** Lets you fix an entry's payment method after the fact — a wrong pick at
+ * add-time, or a card that's since been replaced with a real one, shouldn't
+ * be stuck that way forever. Opens inline under the row it belongs to,
+ * same pattern as the location strip's "Change photo". */
+function MethodPicker({ current, cards, onSet, onClose, onAddCard }) {
+  return (
+    <div className="card" style={{ padding: 10, margin: '4px 0 10px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: cards.length ? 8 : 0 }}>
+        {BASE_METHODS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={'pill' + (current === m ? ' on' : '')}
+            onClick={() => { onSet(m); onClose(); }}
+          >{m}</button>
+        ))}
+        {cards.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={'pill' + (current === c.name ? ' on' : '')}
+            onClick={() => { onSet(c.name); onClose(); }}
+          >{c.name}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <button type="button" className="mono" style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted-3)' }} onClick={onAddCard}>
+          + Add a new card
+        </button>
+        <button type="button" className="mono" style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0, fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted-3)', marginLeft: 'auto' }} onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EntryRow({ r, cards, onSetMethod, onAddCard }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: editing ? 'none' : '1px solid var(--wash-2)' }}>
+        <span style={{ width: 9, height: 9, borderRadius: 3, background: CAT_COLOR[r.cat] || '#a09889', flex: 'none' }} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500, lineHeight: 1.35 }}>{r.label}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className="mono"
+              style={{
+                fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)',
+                background: 'var(--wash)', padding: '3px 6px', borderRadius: 5, border: 0, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >{r.method} ✎</button>
+            {r.date && (
+              <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>
+                {new Date(r.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+            <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>
+              {r.amount === 0 ? 'Included' : {
+                GBP: '£', MXN: 'MX$', USD: 'US$', EUR: '€',
+              }[r.cur] + r.amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </span>
+        </span>
+        <span className="mono" style={{ fontSize: 13, flex: 'none' }}>£{r.fmtGbp}</span>
+      </div>
+      {editing && (
+        <MethodPicker
+          current={r.method}
+          cards={cards}
+          onSet={(m) => onSetMethod(r.source, r.srcIdx, m)}
+          onClose={() => setEditing(false)}
+          onAddCard={onAddCard}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function Costs({ trip }) {
-  const { rows, total, catMap, methodMap, fmt, openExpenseSheet } = trip;
+  const { rows, total, catMap, methodMap, fmt, openExpenseSheet, cards, updateExpenseMethod, openAddCardSheet } = trip;
 
   const catList = Object.keys(catMap)
     .map((k) => ({ label: k, n: catMap[k], color: CAT_COLOR[k] || '#a09889' }))
@@ -22,7 +106,9 @@ export default function Costs({ trip }) {
   // Most recent first. Anything without a date (shouldn't happen once
   // everything's backfilled, but defensively) sorts to the bottom instead
   // of jumbling in with dated entries at the "empty string" position.
-  const rowsByDate = [...rows].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const rowsByDate = [...rows]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .map((r) => ({ ...r, fmtGbp: fmt(r.gbpN) }));
 
   return (
     <div className="pad">
@@ -86,30 +172,14 @@ export default function Costs({ trip }) {
         <div>
           <h3 className="h3" style={{ marginBottom: 12 }}>All entries</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 18 }}>
-            {rowsByDate.map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--wash-2)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 3, background: CAT_COLOR[r.cat] || '#a09889', flex: 'none' }} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500, lineHeight: 1.35 }}>{r.label}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                    <span
-                      className="mono"
-                      style={{ fontSize: 9.5, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)', background: 'var(--wash)', padding: '3px 6px', borderRadius: 5 }}
-                    >{r.method}</span>
-                    {r.date && (
-                      <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>
-                        {new Date(r.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </span>
-                    )}
-                    <span className="mono" style={{ fontSize: 10.5, color: 'var(--muted-3)' }}>
-                      {r.amount === 0 ? 'Included' : {
-                        GBP: '£', MXN: 'MX$', USD: 'US$', EUR: '€',
-                      }[r.cur] + r.amount.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </span>
-                </span>
-                <span className="mono" style={{ fontSize: 13, flex: 'none' }}>£{fmt(r.gbpN)}</span>
-              </div>
+            {rowsByDate.map((r) => (
+              <EntryRow
+                key={r.source + r.srcIdx}
+                r={r}
+                cards={cards}
+                onSetMethod={updateExpenseMethod}
+                onAddCard={openAddCardSheet}
+              />
             ))}
           </div>
           <div className="mono" style={{ fontSize: 10, lineHeight: 1.7, color: 'var(--muted-2)' }}>

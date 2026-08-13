@@ -30,12 +30,13 @@ const EMPTY_ARR = [];
 const EMPTY_OBJ = {};
 
 export function useTripState(meta, onUpdateTrip) {
-  // Always-current mirror of the latest `meta` prop, so mutators that merge
-  // against existing trip fields (photos, in particular) read the freshest
-  // value instead of whatever `meta` a stale useCallback closure captured.
-  // Without this, two writes to the same nested field fired close together
-  // (e.g. two auto photo lookups resolving within a render or two of each
-  // other) can each merge against the same outdated snapshot and clobber
+  // Always-current mirror of the latest `meta` prop, so a mutator that
+  // merges against an existing array/object field (photos, expense method,
+  // etc.) reads the freshest value instead of whatever a stale useCallback
+  // closure captured. Without this, two writes to the same field fired
+  // close together (two auto photo lookups resolving near-simultaneously,
+  // or an expense-method edit landing in the same render window as another
+  // change) can each merge against the same outdated snapshot and clobber
   // one another. Assigning during render is intentional and safe here — it
   // never drives what gets rendered, it just keeps the ref current for the
   // next callback invocation.
@@ -129,7 +130,15 @@ export function useTripState(meta, onUpdateTrip) {
   const costs = meta.costs || EMPTY_ARR;
   const extraCosts = meta.extraCosts || EMPTY_ARR;
   const extraActivities = meta.extraActivities || EMPTY_OBJ;
-  const allCosts = useMemo(() => [...costs, ...extraCosts], [costs, extraCosts]);
+  // Tagged with where each entry actually lives (the curated seed `costs`
+  // array vs. user-added `extraCosts`) and its index there, so an edit made
+  // from the flattened/sorted list in the UI can be written back to the
+  // right place — a payment method picked wrong (or a card that's since
+  // been replaced) should stay correctable long after the entry was added.
+  const allCosts = useMemo(() => [
+    ...costs.map((c, i) => ({ ...c, source: 'costs', srcIdx: i })),
+    ...extraCosts.map((c, i) => ({ ...c, source: 'extraCosts', srcIdx: i })),
+  ], [costs, extraCosts]);
   const rows = useMemo(() => allCosts.map((c) => ({ ...c, gbpN: c.amount / (FX[c.cur] || 1) })), [allCosts]);
   const total = useMemo(() => rows.reduce((a, c) => a + c.gbpN, 0), [rows]);
   const catMap = useMemo(() => {
@@ -182,6 +191,18 @@ export function useTripState(meta, onUpdateTrip) {
     patch({ sheet: null, newCategoryDraft: '' });
     return true;
   }, [state.expAmount, state.expDesc, state.expCat, state.expCur, state.expDate, state.payMethod, state.card, cards, extraCosts, onUpdateTrip, patch]);
+
+  /** Corrects the payment method on an existing expense — a wrong pick at
+   * add-time, or a card that's since been replaced, shouldn't be stuck that
+   * way forever. `source` is 'costs' (the curated seed entries) or
+   * 'extraCosts' (anything added in the app); `idx` is that entry's index
+   * within whichever one it actually lives in (see allCosts, above). Reads
+   * the array to patch from metaRef so this stays correct even if it fires
+   * right after another edit that hasn't rendered through yet. */
+  const updateExpenseMethod = useCallback((source, idx, method) => {
+    const arr = metaRef.current[source] || EMPTY_ARR;
+    onUpdateTrip({ [source]: arr.map((c, i) => (i === idx ? { ...c, method } : c)) });
+  }, [onUpdateTrip]);
 
   const addActivity = useCallback(() => {
     if (!state.activityName.trim()) return false;
@@ -370,7 +391,7 @@ export function useTripState(meta, onUpdateTrip) {
   return {
     meta, state, patch, go, closeSheet, openBooking, openExpenseSheet, openAddStopSheet, openAddBookingSheet,
     openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
-    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos,
+    addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos, updateExpenseMethod,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
   };
 }
