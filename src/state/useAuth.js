@@ -106,16 +106,26 @@ export function useAuth() {
    * locally, reverted with an error message if the write fails. `entries`
    * is a partial patch (e.g. `{ Mexico: ['uid1','uid2'] }`); pass an empty
    * array as a country's value to mark it as "no longer visited" without
-   * losing other countries. */
+   * losing other countries.
+   *
+   * `.select('id')` (rather than just checking `error`) is what catches a
+   * write RLS silently blocks — Postgres/PostgREST reports that as success
+   * with zero rows affected, not an error, so a bare `.update()` would
+   * report "saved" while nothing actually changed. Same shape as
+   * useTripsStore's deleteTrip, for the same reason. */
   const setVisitedCountries = useCallback(async (entries) => {
     if (!household?.householdId) return { ok: false, error: 'No household yet.' };
     const previous = visitedCountriesRef.current;
     const next = { ...previous, ...entries };
     setVisitedCountriesState(next); // optimistic
-    const { error: err } = await supabase.from('households').update({ visited_countries: next }).eq('id', household.householdId);
-    if (err) {
+    const { data, error: err } = await supabase
+      .from('households')
+      .update({ visited_countries: next })
+      .eq('id', household.householdId)
+      .select('id');
+    if (err || !data || data.length === 0) {
       setVisitedCountriesState(previous); // revert — a silent-looking failure is worse than a visible one
-      return { ok: false, error: err.message };
+      return { ok: false, error: err?.message || "That change couldn't be saved." };
     }
     return { ok: true };
   }, [household?.householdId]);

@@ -25,7 +25,7 @@ function useStripePatterns(visitedCountries, memberColor) {
   }, [visitedCountries, memberColor]);
 }
 
-function CountryEditor({ country, members, visitorIds, onToggle, onClose }) {
+function CountryEditor({ country, members, visitorIds, busyId, error, onToggle, onClose }) {
   return (
     <div className="card" style={{ padding: 14, marginTop: 10 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -45,10 +45,12 @@ function CountryEditor({ country, members, visitorIds, onToggle, onClose }) {
               key={m.user_id}
               type="button"
               onClick={() => onToggle(m.user_id)}
+              disabled={busyId === m.user_id}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 12.5, border: `1px solid ${on ? m.color : 'var(--line-strong)'}`,
                 background: on ? m.color : '#fff', color: on ? '#fff' : 'var(--ink)',
+                opacity: busyId === m.user_id ? 0.6 : 1,
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: 99, background: on ? '#fff' : m.color, flex: 'none' }} />
@@ -57,6 +59,7 @@ function CountryEditor({ country, members, visitorIds, onToggle, onClose }) {
           );
         })}
       </div>
+      {error && <div style={{ fontSize: 11.5, color: 'var(--terra)', marginTop: 10, lineHeight: 1.4 }}>Couldn&rsquo;t save that: {error}</div>}
     </div>
   );
 }
@@ -68,6 +71,8 @@ function CountryEditor({ country, members, visitorIds, onToggle, onClose }) {
 export default function WorldMap({ trips, members, visitedCountries, onSetVisitedCountries }) {
   const [query, setQuery] = useState('');
   const [selectedName, setSelectedName] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [toggleError, setToggleError] = useState('');
 
   const { path, projection } = useMemo(() => makeProjection(MAP_W, MAP_H), []);
   const memberById = useMemo(() => Object.fromEntries(members.map((m) => [m.user_id, m])), [members]);
@@ -88,13 +93,21 @@ export default function WorldMap({ trips, members, visitedCountries, onSetVisite
   const pick = (name) => {
     setSelectedName(name);
     setQuery('');
+    setToggleError('');
   };
 
-  const toggleVisitor = (userId) => {
+  const toggleVisitor = async (userId) => {
     if (!selected) return;
+    setToggleError('');
+    setBusyId(userId);
     const current = visitedCountries[selected.name] || [];
     const next = current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId];
-    onSetVisitedCountries({ [selected.name]: next });
+    const res = await onSetVisitedCountries({ [selected.name]: next });
+    setBusyId(null);
+    // A failed save already reverted the map (see setVisitedCountries) — the
+    // point of checking here is just to say *why*, instead of a change
+    // that quietly appears and then quietly disappears with no explanation.
+    if (!res?.ok) setToggleError(res?.error || "That change couldn't be saved.");
   };
 
   const fillFor = (name) => {
@@ -221,8 +234,10 @@ export default function WorldMap({ trips, members, visitedCountries, onSetVisite
           country={selected}
           members={members}
           visitorIds={selectedVisitors}
+          busyId={busyId}
+          error={toggleError}
           onToggle={toggleVisitor}
-          onClose={() => setSelectedName(null)}
+          onClose={() => { setSelectedName(null); setToggleError(''); }}
         />
       )}
     </div>
