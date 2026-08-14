@@ -22,6 +22,64 @@ export const COUNTRIES = worldGeo.features
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
+const COUNTRY_NAMES = new Set(COUNTRIES.map((c) => c.name));
+const COUNTRY_NAMES_LOWER = new Map(COUNTRIES.map((c) => [c.name.toLowerCase(), c.name]));
+
+// Best-effort bridge between what a geocoder calls a country and what this
+// map's Natural Earth data calls it — the two don't always agree ("Czech
+// Republic" vs. "Czechia", "Ivory Coast" vs. "Côte d'Ivoire"). Not
+// exhaustive; an unmapped mismatch just fails to normalize (see
+// normalizeCountryName) rather than mis-coloring anything.
+const ALIASES = {
+  'united states': 'United States of America',
+  usa: 'United States of America',
+  uk: 'United Kingdom',
+  'great britain': 'United Kingdom',
+  'czech republic': 'Czechia',
+  'ivory coast': "Côte d'Ivoire",
+  'democratic republic of the congo': 'Dem. Rep. Congo',
+  'congo-kinshasa': 'Dem. Rep. Congo',
+  'republic of the congo': 'Congo',
+  'congo-brazzaville': 'Congo',
+  'north macedonia': 'Macedonia',
+  swaziland: 'eSwatini',
+  'bosnia and herzegovina': 'Bosnia and Herz.',
+  'dominican republic': 'Dominican Rep.',
+  'central african republic': 'Central African Rep.',
+  'equatorial guinea': 'Eq. Guinea',
+  'south sudan': 'S. Sudan',
+  'myanmar (burma)': 'Myanmar',
+  burma: 'Myanmar',
+  'solomon islands': 'Solomon Is.',
+  'falkland islands': 'Falkland Is.',
+  'falkland islands (malvinas)': 'Falkland Is.',
+  'french southern and antarctic lands': 'Fr. S. Antarctic Lands',
+  'french southern territories': 'Fr. S. Antarctic Lands',
+  'western sahara': 'W. Sahara',
+  'republic of korea': 'South Korea',
+  "democratic people's republic of korea": 'North Korea',
+  'russian federation': 'Russia',
+  'syrian arab republic': 'Syria',
+  'state of palestine': 'Palestine',
+  'republic of ireland': 'Ireland',
+  'lao pdr': 'Laos',
+  "lao people's democratic republic": 'Laos',
+  'brunei darussalam': 'Brunei',
+};
+
+/** Matches a geocoder-supplied country name (e.g. Nominatim's
+ * `address.country`) back to this map's own country name, so a resolved
+ * country can actually be colored. Returns null rather than guessing when
+ * nothing lines up — a silent miss beats mis-coloring a country. */
+export function normalizeCountryName(name) {
+  if (!name) return null;
+  if (COUNTRY_NAMES.has(name)) return name;
+  const lower = name.trim().toLowerCase();
+  if (COUNTRY_NAMES_LOWER.has(lower)) return COUNTRY_NAMES_LOWER.get(lower);
+  if (ALIASES[lower]) return ALIASES[lower];
+  return null;
+}
+
 /** Builds a projection + path generator fitted to a given pixel size —
  * called once per map render (the map's box size doesn't change often),
  * not per-country. Equirectangular rather than something fancier: simple,

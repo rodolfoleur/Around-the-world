@@ -193,7 +193,7 @@ export default function TripsHome({ trips, onOpen, onCreate, members, onSignOut,
       </div>
 
       {members.length > 0 && (
-        <WorldMap members={members} visitedCountries={visitedCountries} onSetVisitedCountries={onSetVisitedCountries} />
+        <WorldMap trips={trips} members={members} visitedCountries={visitedCountries} onSetVisitedCountries={onSetVisitedCountries} />
       )}
 
       <JoinTripRow onJoinTrip={onJoinTrip} onSignOut={onSignOut} />

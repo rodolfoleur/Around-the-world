@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { COUNTRIES, makeProjection } from '../../lib/worldCountries.js';
+import { usePlannedCountries } from '../../state/usePlannedCountries.js';
 
 const MAP_W = 960;
 const MAP_H = 500;
 const UNVISITED_FILL = '#eae4d6';
+const PLANNED_FILL = '#c9c2b4';
 
 /** One diagonal-stripe SVG pattern per distinct combination of visitor
  * colors actually in use — a country visited by both Rodolfo and Kirsten
@@ -63,7 +65,7 @@ function CountryEditor({ country, members, visitorIds, onToggle, onClose }) {
  * geometry (see lib/worldCountries.js), colored per visitor, with a small
  * round initial badge per person who's been there. Search finds a country
  * by name; clicking a country directly on the map works too. */
-export default function WorldMap({ members, visitedCountries, onSetVisitedCountries }) {
+export default function WorldMap({ trips, members, visitedCountries, onSetVisitedCountries }) {
   const [query, setQuery] = useState('');
   const [selectedName, setSelectedName] = useState(null);
 
@@ -71,8 +73,10 @@ export default function WorldMap({ members, visitedCountries, onSetVisitedCountr
   const memberById = useMemo(() => Object.fromEntries(members.map((m) => [m.user_id, m])), [members]);
   const memberColor = (userId) => memberById[userId]?.color;
   const patterns = useStripePatterns(visitedCountries, memberColor);
+  const plannedCountries = usePlannedCountries(trips, visitedCountries);
 
   const visitedCount = Object.values(visitedCountries).filter((v) => (v || []).length > 0).length;
+  const countFor = (userId) => Object.values(visitedCountries).filter((v) => (v || []).includes(userId)).length;
 
   const matches = query.trim()
     ? COUNTRIES.filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
@@ -95,12 +99,19 @@ export default function WorldMap({ members, visitedCountries, onSetVisitedCountr
 
   const fillFor = (name) => {
     const visitors = visitedCountries[name];
-    if (!visitors || visitors.length === 0) return UNVISITED_FILL;
-    const colors = [...new Set(visitors.map(memberColor).filter(Boolean))].sort();
-    if (colors.length === 0) return UNVISITED_FILL;
-    if (colors.length === 1) return colors[0];
-    const combo = [...patterns.values()].find((p) => p.colors.join('|') === colors.join('|'));
-    return combo ? `url(#${combo.id})` : colors[0];
+    if (visitors && visitors.length > 0) {
+      const colors = [...new Set(visitors.map(memberColor).filter(Boolean))].sort();
+      if (colors.length === 1) return colors[0];
+      if (colors.length > 1) {
+        const combo = [...patterns.values()].find((p) => p.colors.join('|') === colors.join('|'));
+        if (combo) return `url(#${combo.id})`;
+      }
+    }
+    // Not yet visited, but an upcoming trip already goes there — grayed in
+    // as "about to be new" rather than left looking exactly like anywhere
+    // you've never planned to go.
+    if (plannedCountries.has(name)) return PLANNED_FILL;
+    return UNVISITED_FILL;
   };
 
   return (
@@ -114,11 +125,18 @@ export default function WorldMap({ members, visitedCountries, onSetVisitedCountr
           {members.map((m) => (
             <span key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--muted)' }}>
               <span style={{ width: 8, height: 8, borderRadius: 99, background: m.color }} />
-              {m.display_name}
+              {m.display_name} <span className="mono" style={{ color: 'var(--muted-3)' }}>{countFor(m.user_id)}</span>
             </span>
           ))}
         </div>
       </div>
+
+      {plannedCountries.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: 'var(--muted-2)', marginBottom: 10 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 99, background: PLANNED_FILL }} />
+          Gray — new on an upcoming trip
+        </div>
+      )}
 
       <div style={{ position: 'relative', marginBottom: 10 }}>
         <input

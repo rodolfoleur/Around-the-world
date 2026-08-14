@@ -26,3 +26,23 @@ export async function geocodePlace(query) {
     return null;
   }
 }
+
+/** Like geocodePlace, but asks Nominatim for the address breakdown too, so
+ * a city name ("Kitzbühel") can be traced back to the country it's in
+ * ("Austria") — used for graying in an upcoming trip's not-yet-visited
+ * countries on the world map. Same never-throws contract: an unresolvable
+ * name just means no country match, not a broken map. */
+export async function resolveCountry(query) {
+  const q = (query || '').trim();
+  if (!q) return null;
+  try {
+    const url = `${NOMINATIM_SEARCH}?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return null;
+    return data[0].address?.country || null;
+  } catch {
+    return null;
+  }
+}
