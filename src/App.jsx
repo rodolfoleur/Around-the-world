@@ -75,6 +75,8 @@ function HouseholdApp({ auth }) {
         members={auth.members}
         onSignOut={auth.signOut}
         onJoinTrip={joinTrip}
+        visitedCountries={auth.visitedCountries}
+        onSetVisitedCountries={auth.setVisitedCountries}
       />
     </div>
   );

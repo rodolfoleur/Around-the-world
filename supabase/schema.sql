@@ -14,8 +14,19 @@ create extension if not exists pgcrypto;
 
 create table households (
   id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- "Where we've been" world map on the trips dashboard — keyed by
+  -- country name (as given by the map's own geography data), value = an
+  -- array of household_members.user_id who've visited. Household-level
+  -- (not per-trip): a lifetime travel record, not tied to any one trip.
+  visited_countries jsonb not null default '{}'
 );
+
+-- Same reasoning as trips: without full replica identity, Postgres's
+-- logical replication (what Realtime rides on) can omit an unchanged
+-- jsonb column's value once it's large enough to be stored out-of-line —
+-- as visited_countries will be, eventually, with enough countries marked.
+alter table households replica identity full;
 
 create table household_members (
   household_id uuid not null references households(id) on delete cascade,
@@ -296,15 +307,23 @@ create policy "members can see their own household row"
   on households for select
   using (is_household_member(id));
 
+-- The one direct write allowed on households — visited_countries is
+-- shared, editable content (like a trip's fields), not membership/access
+-- control, so it doesn't need the security-definer-RPC treatment below.
+create policy "members can update their household's visited countries"
+  on households for update
+  using (is_household_member(id))
+  with check (is_household_member(id));
+
 create policy "members can see other members of their household"
   on household_members for select
   using (is_household_member(household_id));
 
--- no direct insert/update/delete policies on household_members,
--- households, household_invites, trip_shares, or trip_invites: all writes
--- to these go through the security definer RPCs above, which is
--- deliberate — keeps the client from adding itself to an arbitrary
--- household or trip directly.
+-- no direct insert/delete policies on households, and no direct
+-- insert/update/delete on household_members, household_invites,
+-- trip_shares, or trip_invites: all writes to these go through the
+-- security definer RPCs above, which is deliberate — keeps the client
+-- from adding itself to an arbitrary household or trip directly.
 
 create policy "trip members can see their trip's shares"
   on trip_shares for select
@@ -331,9 +350,10 @@ create policy "members can delete their household's trips"
   using (is_household_member(household_id));
 
 -- ---------------------------------------------------------------------
--- Realtime: broadcast row changes on trips to subscribed clients
+-- Realtime: broadcast row changes on trips/households to subscribed clients
 -- ---------------------------------------------------------------------
 alter publication supabase_realtime add table trips;
+alter publication supabase_realtime add table households;
 
 -- ---------------------------------------------------------------------
 -- Storage: a public bucket for uploaded location photos. Public-read is

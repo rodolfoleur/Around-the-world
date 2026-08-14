@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { tripClock, formatRange } from '../../utils/dates.js';
+import WorldMap from '../dashboard/WorldMap.jsx';
 
 function TripCard({ trip, onOpen }) {
   const clock = tripClock(trip.days);
@@ -109,7 +110,7 @@ function JoinTripRow({ onJoinTrip, onSignOut }) {
   );
 }
 
-export default function TripsHome({ trips, onOpen, onCreate, members, onSignOut, onJoinTrip }) {
+export default function TripsHome({ trips, onOpen, onCreate, members, onSignOut, onJoinTrip, visitedCountries, onSetVisitedCountries }) {
   const [showCreate, setShowCreate] = useState(false);
   const [tried, setTried] = useState(false);
   const defaultWho = members.map((m) => m.display_name).join(', ');
@@ -190,6 +191,10 @@ export default function TripsHome({ trips, onOpen, onCreate, members, onSignOut,
       <div className="mono" style={{ fontSize: 11.5, color: 'var(--muted-2)', marginBottom: 20 }}>
         {trips.length} trip{trips.length === 1 ? '' : 's'} · {upcoming.length} upcoming
       </div>
+
+      {members.length > 0 && (
+        <WorldMap members={members} visitedCountries={visitedCountries} onSetVisitedCountries={onSetVisitedCountries} />
+      )}
 
       <JoinTripRow onJoinTrip={onJoinTrip} onSignOut={onSignOut} />
 

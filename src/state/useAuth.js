@@ -1,28 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, configured } from '../lib/supabaseClient.js';
 
 /**
  * Auth + household membership. A household is the sharing boundary —
- * everyone in it sees and edits the same trips in real time.
+ * everyone in it sees and edits the same trips (and the "Where we've
+ * been" world map) in real time.
  */
 export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [household, setHousehold] = useState(null); // { householdId, inviteCode } | null
   const [members, setMembers] = useState([]);
+  const [visitedCountries, setVisitedCountriesState] = useState({});
   const [error, setError] = useState('');
+
+  // Always-current mirror of visitedCountries, so setVisitedCountries below
+  // merges against the freshest known value instead of a stale closure —
+  // same reasoning as the trip-level metaRef pattern (two quick country
+  // toggles landing close together shouldn't be able to clobber each other).
+  const visitedCountriesRef = useRef(visitedCountries);
+  visitedCountriesRef.current = visitedCountries;
 
   const loadHousehold = useCallback(async () => {
     const { data, error: err } = await supabase.rpc('my_household');
     if (err) { setError(err.message); return; }
     const row = data?.[0];
-    if (!row?.household_id) { setHousehold(null); setMembers([]); return; }
+    if (!row?.household_id) { setHousehold(null); setMembers([]); setVisitedCountriesState({}); return; }
     setHousehold({ householdId: row.household_id, inviteCode: row.invite_code });
-    const { data: memberRows } = await supabase
-      .from('household_members')
-      .select('user_id, display_name, color')
-      .eq('household_id', row.household_id);
+    const [{ data: memberRows }, { data: householdRow }] = await Promise.all([
+      supabase.from('household_members').select('user_id, display_name, color').eq('household_id', row.household_id),
+      supabase.from('households').select('visited_countries').eq('id', row.household_id).single(),
+    ]);
     setMembers(memberRows || []);
+    setVisitedCountriesState(householdRow?.visited_countries || {});
   }, []);
 
   useEffect(() => {
@@ -41,8 +51,22 @@ export function useAuth() {
 
   useEffect(() => {
     if (session) loadHousehold();
-    else { setHousehold(null); setMembers([]); }
+    else { setHousehold(null); setMembers([]); setVisitedCountriesState({}); }
   }, [session, loadHousehold]);
+
+  // Keeps visited_countries live-synced across devices — a change Rodolfo
+  // makes on his phone shows up on Kirsten's laptop without a reload, the
+  // same way trip edits already do.
+  useEffect(() => {
+    const householdId = household?.householdId;
+    if (!householdId) return;
+    const channel = supabase
+      .channel(`household-${householdId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'households', filter: `id=eq.${householdId}` },
+        (payload) => setVisitedCountriesState(payload.new.visited_countries || {}))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [household?.householdId]);
 
   const signUp = useCallback(async (email, password) => {
     setError('');
@@ -78,8 +102,26 @@ export function useAuth() {
     return true;
   }, [loadHousehold]);
 
+  /** Merges `entries` into visited_countries and persists it — optimistic
+   * locally, reverted with an error message if the write fails. `entries`
+   * is a partial patch (e.g. `{ Mexico: ['uid1','uid2'] }`); pass an empty
+   * array as a country's value to mark it as "no longer visited" without
+   * losing other countries. */
+  const setVisitedCountries = useCallback(async (entries) => {
+    if (!household?.householdId) return { ok: false, error: 'No household yet.' };
+    const previous = visitedCountriesRef.current;
+    const next = { ...previous, ...entries };
+    setVisitedCountriesState(next); // optimistic
+    const { error: err } = await supabase.from('households').update({ visited_countries: next }).eq('id', household.householdId);
+    if (err) {
+      setVisitedCountriesState(previous); // revert — a silent-looking failure is worse than a visible one
+      return { ok: false, error: err.message };
+    }
+    return { ok: true };
+  }, [household?.householdId]);
+
   return {
-    loading, session, user: session?.user || null, household, members, error, setError,
-    signUp, signIn, signOut, createHousehold, joinHousehold,
+    loading, session, user: session?.user || null, household, members, visitedCountries, error, setError,
+    signUp, signIn, signOut, createHousehold, joinHousehold, setVisitedCountries,
   };
 }
