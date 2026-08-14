@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { COUNTRIES, makeProjection } from '../../lib/worldCountries.js';
 import { usePlannedCountries } from '../../state/usePlannedCountries.js';
 
@@ -6,6 +6,26 @@ const MAP_W = 960;
 const MAP_H = 500;
 const UNVISITED_FILL = '#eae4d6';
 const PLANNED_FILL = '#c9c2b4';
+const MIN_SCALE = 1;
+const MAX_SCALE = 8;
+
+const clampNum = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/** Keeps the zoomed content covering the whole viewBox — no empty margin
+ * ever pans into view, and it never zooms out past the map's own size. */
+function clampTransform({ scale, tx, ty }) {
+  const s = clampNum(scale, MIN_SCALE, MAX_SCALE);
+  return {
+    scale: s,
+    tx: clampNum(tx, MAP_W * (1 - s), 0),
+    ty: clampNum(ty, MAP_H * (1 - s), 0),
+  };
+}
+
+const zoomBtnStyle = {
+  width: 28, height: 28, borderRadius: 8, border: '1px solid var(--line-strong)', background: '#fff',
+  color: 'var(--ink)', fontSize: 16, lineHeight: '26px', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,.12)',
+};
 
 /** One diagonal-stripe SVG pattern per distinct combination of visitor
  * colors actually in use — a country visited by both Rodolfo and Kirsten
@@ -73,6 +93,12 @@ export default function WorldMap({ trips, members, visitedCountries, onSetVisite
   const [selectedName, setSelectedName] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [toggleError, setToggleError] = useState('');
+  const [transform, setTransform] = useState({ scale: 1, tx: 0, ty: 0 });
+
+  const svgRef = useRef(null);
+  const pointersRef = useRef(new Map()); // pointerId -> last {x,y} in client coords, for drag + pinch
+  const dragStartRef = useRef(null); // { x, y, moved } for the gesture currently in progress
+  const pinchDistRef = useRef(0);
 
   const { path, projection } = useMemo(() => makeProjection(MAP_W, MAP_H), []);
   const memberById = useMemo(() => Object.fromEntries(members.map((m) => [m.user_id, m])), [members]);
@@ -108,6 +134,105 @@ export default function WorldMap({ trips, members, visitedCountries, onSetVisite
     // point of checking here is just to say *why*, instead of a change
     // that quietly appears and then quietly disappears with no explanation.
     if (!res?.ok) setToggleError(res?.error || "That change couldn't be saved.");
+  };
+
+  // Converts a client (viewport) coordinate to the map's own 960x500 space,
+  // regardless of how large the SVG is actually rendered on screen.
+  const toViewBox = (clientX, clientY) => {
+    const rect = svgRef.current.getBoundingClientRect();
+    return { x: ((clientX - rect.left) / rect.width) * MAP_W, y: ((clientY - rect.top) / rect.height) * MAP_H };
+  };
+
+  // Zooms to nextScale while keeping the content under viewBox point (sx,
+  // sy) visually fixed — whatever's under your cursor (wheel) or the map's
+  // current center (+/- buttons) doesn't jump around as you zoom.
+  const zoomAt = (nextScale, sx, sy) => {
+    setTransform((t) => {
+      const s = clampNum(nextScale, MIN_SCALE, MAX_SCALE);
+      const ratio = s / t.scale;
+      return clampTransform({ scale: s, tx: sx - ratio * (sx - t.tx), ty: sy - ratio * (sy - t.ty) });
+    });
+  };
+
+  const zoomIn = () => zoomAt(transform.scale * 1.4, MAP_W / 2, MAP_H / 2);
+  const zoomOut = () => zoomAt(transform.scale / 1.4, MAP_W / 2, MAP_H / 2);
+  const resetZoom = () => setTransform({ scale: 1, tx: 0, ty: 0 });
+
+  // Trackpad pinch and ctrl/cmd+scroll both arrive as wheel events with
+  // ctrlKey set — that's the only wheel gesture the map hijacks, so a
+  // normal scroll past the map still scrolls the dashboard, not the map.
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const { x, y } = toViewBox(e.clientX, e.clientY);
+      zoomAt(transform.scale * (e.deltaY < 0 ? 1.2 : 1 / 1.2), x, y);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [transform.scale]);
+
+  // Pointer capture is only grabbed once a gesture is confirmed to actually
+  // be a drag or a pinch (below) — not here on every pointerdown. Chrome
+  // retargets the click that follows a captured pointer to the capturing
+  // element, which silently broke plain clicks on a country: the click
+  // fired on the <svg>, not the <path>, so its onClick never ran.
+  const onMapPointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 1) dragStartRef.current = { x: e.clientX, y: e.clientY, moved: false };
+    if (pointersRef.current.size === 2) {
+      const [p1, p2] = [...pointersRef.current.values()];
+      pinchDistRef.current = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      // A second finger down is unambiguously a gesture, never a tap.
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* unsupported */ }
+    }
+  };
+
+  const onMapPointerMove = (e) => {
+    const prev = pointersRef.current.get(e.pointerId);
+    if (!prev) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Two fingers down: pinch-to-zoom, anchored on the midpoint between them.
+    if (pointersRef.current.size >= 2) {
+      const [p1, p2] = [...pointersRef.current.values()];
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const mid = toViewBox((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+      if (pinchDistRef.current > 0) zoomAt(transform.scale * (dist / pinchDistRef.current), mid.x, mid.y);
+      pinchDistRef.current = dist;
+      if (dragStartRef.current) dragStartRef.current.moved = true;
+      return;
+    }
+
+    // One finger/pointer down: drag to pan.
+    const rect = svgRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - prev.x) / rect.width) * MAP_W;
+    const dy = ((e.clientY - prev.y) / rect.height) * MAP_H;
+    setTransform((t) => clampTransform({ ...t, tx: t.tx + dx, ty: t.ty + dy }));
+
+    if (dragStartRef.current && !dragStartRef.current.moved) {
+      const total = Math.hypot(e.clientX - dragStartRef.current.x, e.clientY - dragStartRef.current.y);
+      if (total > 4) {
+        dragStartRef.current.moved = true;
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* unsupported */ }
+      }
+    }
+  };
+
+  const onMapPointerUp = (e) => {
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* not captured, or unsupported */ }
+    pointersRef.current.delete(e.pointerId);
+    pinchDistRef.current = 0;
+  };
+
+  // A drag that panned the map shouldn't also select whatever country the
+  // pointer happened to be over when it was released.
+  const clickCountry = (name) => {
+    if (dragStartRef.current?.moved) return;
+    pick(name);
   };
 
   const fillFor = (name) => {
@@ -178,56 +303,102 @@ export default function WorldMap({ trips, members, visitedCountries, onSetVisite
         )}
       </div>
 
-      <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 12, background: '#f5f1e8' }}>
-        <defs>
-          {[...patterns.values()].map(({ id, colors }) => {
-            const stripe = 10;
-            const size = stripe * colors.length;
-            return (
-              <pattern key={id} id={id} width={size} height={size} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                {colors.map((c, i) => (
-                  <rect key={c} x={i * stripe} y={0} width={stripe} height={size} fill={c} />
-                ))}
-              </pattern>
-            );
-          })}
-        </defs>
+      <div style={{ position: 'relative', marginBottom: 10 }}>
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+          onPointerDown={onMapPointerDown}
+          onPointerMove={onMapPointerMove}
+          onPointerUp={onMapPointerUp}
+          onPointerCancel={onMapPointerUp}
+          style={{
+            width: '100%', height: 'auto', display: 'block', borderRadius: 12, background: '#f5f1e8',
+            touchAction: 'none', cursor: transform.scale > MIN_SCALE ? 'grab' : 'default',
+          }}
+        >
+          <defs>
+            {[...patterns.values()].map(({ id, colors }) => {
+              const stripe = 10;
+              const size = stripe * colors.length;
+              return (
+                <pattern key={id} id={id} width={size} height={size} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  {colors.map((c, i) => (
+                    <rect key={c} x={i * stripe} y={0} width={stripe} height={size} fill={c} />
+                  ))}
+                </pattern>
+              );
+            })}
+          </defs>
 
-        {COUNTRIES.map((c) => (
-          <path
-            key={c.name}
-            data-country={c.name}
-            d={path(c.feature)}
-            fill={fillFor(c.name)}
-            stroke={selectedName === c.name ? 'var(--ink)' : '#fff'}
-            strokeWidth={selectedName === c.name ? 1.6 : 0.5}
-            onClick={() => pick(c.name)}
-            style={{ cursor: 'pointer' }}
-          />
-        ))}
+          <g transform={`translate(${transform.tx} ${transform.ty}) scale(${transform.scale})`}>
+            {COUNTRIES.map((c) => (
+              <path
+                key={c.name}
+                data-country={c.name}
+                d={path(c.feature)}
+                fill={fillFor(c.name)}
+                stroke={selectedName === c.name ? 'var(--ink)' : '#fff'}
+                strokeWidth={selectedName === c.name ? 1.6 : 0.5}
+                vectorEffect="non-scaling-stroke"
+                onClick={() => clickCountry(c.name)}
+                style={{ cursor: 'pointer' }}
+              />
+            ))}
 
-        {COUNTRIES.filter((c) => (visitedCountries[c.name] || []).length > 0).map((c) => {
-          const [x, y] = projection(c.centroid);
-          const visitors = visitedCountries[c.name] || [];
-          return (
-            <g key={c.name} style={{ pointerEvents: 'none' }}>
-              {visitors.map((userId, i) => {
-                const m = memberById[userId];
-                if (!m) return null;
-                const offset = (i - (visitors.length - 1) / 2) * 11;
-                return (
-                  <g key={userId} transform={`translate(${x + offset}, ${y})`}>
-                    <circle r={7} fill={m.color} stroke="#fff" strokeWidth={1.4} />
-                    <text textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={700} fill="#fff" fontFamily="ui-monospace, monospace">
-                      {(m.display_name?.[0] || '?').toUpperCase()}
-                    </text>
-                  </g>
-                );
-              })}
-            </g>
-          );
-        })}
-      </svg>
+            {COUNTRIES.filter((c) => (visitedCountries[c.name] || []).length > 0).map((c) => {
+              const [x, y] = projection(c.centroid);
+              const visitors = visitedCountries[c.name] || [];
+              // Counter-scaled so badges stay a constant, readable size on
+              // screen no matter how far zoomed in the map currently is.
+              const r = 7 / transform.scale;
+              const gap = 11 / transform.scale;
+              return (
+                <g key={c.name} style={{ pointerEvents: 'none' }}>
+                  {visitors.map((userId, i) => {
+                    const m = memberById[userId];
+                    if (!m) return null;
+                    const offset = (i - (visitors.length - 1) / 2) * gap;
+                    return (
+                      <g key={userId} transform={`translate(${x + offset}, ${y})`}>
+                        <circle r={r} fill={m.color} stroke="#fff" strokeWidth={1.4 / transform.scale} />
+                        <text textAnchor="middle" dominantBaseline="central" fontSize={8 / transform.scale} fontWeight={700} fill="#fff" fontFamily="ui-monospace, monospace">
+                          {(m.display_name?.[0] || '?').toUpperCase()}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+
+        <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button
+            type="button"
+            onClick={zoomIn}
+            disabled={transform.scale >= MAX_SCALE}
+            aria-label="Zoom in"
+            style={{ ...zoomBtnStyle, opacity: transform.scale >= MAX_SCALE ? 0.4 : 1, cursor: transform.scale >= MAX_SCALE ? 'default' : 'pointer' }}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={zoomOut}
+            disabled={transform.scale <= MIN_SCALE}
+            aria-label="Zoom out"
+            style={{ ...zoomBtnStyle, opacity: transform.scale <= MIN_SCALE ? 0.4 : 1, cursor: transform.scale <= MIN_SCALE ? 'default' : 'pointer' }}
+          >
+            −
+          </button>
+          {transform.scale > MIN_SCALE && (
+            <button type="button" onClick={resetZoom} aria-label="Reset zoom" style={{ ...zoomBtnStyle, fontSize: 14, cursor: 'pointer' }}>
+              ↺
+            </button>
+          )}
+        </div>
+      </div>
 
       {selected && (
         <CountryEditor
