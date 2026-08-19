@@ -179,6 +179,40 @@ function AddPackingRow({ members, onAdd }) {
   );
 }
 
+/** Buckets items by category, in the same fixed order as the add-row's
+ * pills (not alphabetical) — Clothing first, Misc last — and drops any
+ * category with nothing in it rather than showing an empty header. A
+ * value outside CATEGORIES (shouldn't happen — the add row only offers
+ * those pills — but a stray one is possible from copy-from-trip against
+ * an older list) falls back to Misc rather than getting its own group. */
+function groupByCategory(items) {
+  const byCategory = new Map();
+  items.forEach((item) => {
+    const cat = CATEGORIES.includes(item.category) ? item.category : 'Misc';
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat).push(item);
+  });
+  return CATEGORIES.filter((c) => byCategory.has(c)).map((c) => [c, byCategory.get(c)]);
+}
+
+function CategoryGroup({ category, items, memberById, onToggle, onRemove }) {
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <div
+        className="mono"
+        style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: CATEGORY_COLOR[category] || 'var(--muted-3)', margin: '10px 0 6px' }}
+      >
+        {category} · {items.length}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {items.map((item) => (
+          <PackingRow key={item.id} item={item} memberById={memberById} onToggle={onToggle} onRemove={onRemove} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PackingRow({ item, memberById, onToggle, onRemove }) {
   return (
     <div className="card-btn" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', cursor: 'default' }}>
@@ -294,9 +328,9 @@ export default function Packing({ trip, members = [], otherTrips = [] }) {
           <div style={{ fontSize: 14, lineHeight: 1.5 }}>Nothing on the list yet — add your first item above.</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {pending.map((item) => (
-            <PackingRow key={item.id} item={item} memberById={memberById} onToggle={togglePackingItem} onRemove={removePackingItem} />
+        <div>
+          {groupByCategory(pending).map(([category, items]) => (
+            <CategoryGroup key={category} category={category} items={items} memberById={memberById} onToggle={togglePackingItem} onRemove={removePackingItem} />
           ))}
 
           {pending.length === 0 && (
@@ -305,11 +339,11 @@ export default function Packing({ trip, members = [], otherTrips = [] }) {
 
           {packed.length > 0 && (
             <>
-              <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-3)', margin: '14px 0 2px' }}>
+              <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted-3)', margin: '18px 0 2px' }}>
                 Packed · {packed.length}
               </div>
-              {packed.map((item) => (
-                <PackingRow key={item.id} item={item} memberById={memberById} onToggle={togglePackingItem} onRemove={removePackingItem} />
+              {groupByCategory(packed).map(([category, items]) => (
+                <CategoryGroup key={category} category={category} items={items} memberById={memberById} onToggle={togglePackingItem} onRemove={removePackingItem} />
               ))}
             </>
           )}
