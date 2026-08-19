@@ -182,6 +182,7 @@ export function useTripState(meta, onUpdateTrip) {
 
   const todos = meta.todos || EMPTY_ARR;
   const photos = meta.photos || EMPTY_OBJ;
+  const packing = meta.packing || EMPTY_ARR;
 
   const roadTrip = meta.roadTrip || false;
   // Soft-deleted the same way bookings are — no other code references a
@@ -366,6 +367,32 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ todos: todos.filter((t) => t.id !== id) });
   }, [todos, onUpdateTrip]);
 
+  /**
+   * The packing list — same shape as the to-do list (a flat array, not tied
+   * to any day), with an optional `assignee` (a household member's user_id,
+   * or omitted/null for a shared item — "passports" isn't just one person's
+   * job). Reads from metaRef so a quick add-add-add doesn't lose an item to
+   * a stale closure the way updateExpenseMethod's comment describes.
+   */
+  const addPackingItem = useCallback((text, category, assignee) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return false;
+    const arr = metaRef.current.packing || EMPTY_ARR;
+    const entry = { id: 'pack-' + Date.now(), text: trimmed, category: category || 'Misc', assignee: assignee || null, packed: false };
+    onUpdateTrip({ packing: [...arr, entry] });
+    return true;
+  }, [onUpdateTrip]);
+
+  const togglePackingItem = useCallback((id) => {
+    const arr = metaRef.current.packing || EMPTY_ARR;
+    onUpdateTrip({ packing: arr.map((p) => (p.id === id ? { ...p, packed: !p.packed } : p)) });
+  }, [onUpdateTrip]);
+
+  const removePackingItem = useCallback((id) => {
+    const arr = metaRef.current.packing || EMPTY_ARR;
+    onUpdateTrip({ packing: arr.filter((p) => p.id !== id) });
+  }, [onUpdateTrip]);
+
   /** Sets (or clears, with url=null) a custom photo for one location —
    * keyed by the location's display name, so it works the same for a
    * curated city or any free-text one a user typed into a day's City field.
@@ -454,7 +481,8 @@ export function useTripState(meta, onUpdateTrip) {
     openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
     addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos, updateExpenseMethod, deleteExpense,
     toggleRoadTrip, addJourneyLeg, updateJourneyLeg, deleteJourneyLeg,
+    addPackingItem, togglePackingItem, removePackingItem,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
-    roadTrip, journeyLegs,
+    roadTrip, journeyLegs, packing,
   };
 }

@@ -62,6 +62,9 @@ create table trips (
   custom_cards jsonb not null default '[]',
   todos jsonb not null default '[]',
   photos jsonb not null default '{}',
+  road_trip boolean not null default false,
+  journey_legs jsonb not null default '[]',
+  packing jsonb not null default '[]',
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

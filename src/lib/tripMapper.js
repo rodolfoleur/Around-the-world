@@ -23,6 +23,7 @@ export function rowToTrip(row) {
     photos: row.photos || {},
     roadTrip: row.road_trip || false,
     journeyLegs: row.journey_legs || [],
+    packing: row.packing || [],
     updatedAt: row.updated_at,
   };
 }
@@ -47,6 +48,7 @@ export function tripToInsertRow(trip, householdId, userId) {
     photos: trip.photos || {},
     road_trip: !!trip.roadTrip,
     journey_legs: trip.journeyLegs || [],
+    packing: trip.packing || [],
     created_by: userId,
   };
 }
@@ -60,7 +62,7 @@ export function tripToInsertRow(trip, householdId, userId) {
 // itself is fine. Trusting that at face value is exactly what made "days"
 // appear to vanish after adding an activity. `ARRAY_COLS`/`OBJECT_COLS` are
 // the jsonb columns this can happen to, mapped to their camelCase trip key.
-const ARRAY_COLS = { days: 'days', bookings: 'bookings', costs: 'costs', extra_costs: 'extraCosts', custom_cards: 'customCards', travelers: 'travelers', todos: 'todos', journey_legs: 'journeyLegs' };
+const ARRAY_COLS = { days: 'days', bookings: 'bookings', costs: 'costs', extra_costs: 'extraCosts', custom_cards: 'customCards', travelers: 'travelers', todos: 'todos', journey_legs: 'journeyLegs', packing: 'packing' };
 const OBJECT_COLS = { extra_activities: 'extraActivities', photos: 'photos' };
 
 /**
@@ -114,6 +116,7 @@ const PATCH_KEY_MAP = {
   photos: 'photos',
   roadTrip: 'road_trip',
   journeyLegs: 'journey_legs',
+  packing: 'packing',
 };
 
 /** Converts a partial camelCase patch (only the fields we actually mutate) into row column names. */

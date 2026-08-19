@@ -7,6 +7,7 @@ import Costs from './screens/Costs.jsx';
 import Bookings from './screens/Bookings.jsx';
 import Calendar from './screens/Calendar.jsx';
 import Todo from './screens/Todo.jsx';
+import Packing from './screens/Packing.jsx';
 import ExpenseSheet from './sheets/ExpenseSheet.jsx';
 import AddActivitySheet from './sheets/AddActivitySheet.jsx';
 import BookingSheet from './sheets/BookingSheet.jsx';
@@ -22,10 +23,14 @@ const TABS = [
   ['bookings', 'Bookings'],
   ['calendar', 'Calendar'],
   ['todo', 'To-do'],
+  ['packing', 'Packing'],
 ];
 
-/** The full single-trip experience — tab bar, screens and sheets — for one trip descriptor. */
-export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip }) {
+/** The full single-trip experience — tab bar, screens and sheets — for one trip descriptor.
+ * `members` (household members with display_name/color) is optional and
+ * only used by Packing, for the per-person assignee badges — every other
+ * screen here works fine without it. */
+export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip, members }) {
   const trip = useTripState(meta, onUpdateTrip);
   const { state, go, closeSheet } = trip;
 
@@ -39,6 +44,7 @@ export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip }) {
         {state.tab === 'bookings' && <Bookings trip={trip} />}
         {state.tab === 'calendar' && <Calendar trip={trip} />}
         {state.tab === 'todo' && <Todo trip={trip} />}
+        {state.tab === 'packing' && <Packing trip={trip} members={members} />}
       </div>
 
       <nav className="tabbar" aria-label="Primary">

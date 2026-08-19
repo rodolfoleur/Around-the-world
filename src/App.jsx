@@ -59,6 +59,7 @@ function HouseholdApp({ auth }) {
             onBack={() => setActiveTripId(null)}
             onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
             onDeleteTrip={handleDeleteTrip}
+            members={auth.members}
           />
         </ErrorBoundary>
       </>

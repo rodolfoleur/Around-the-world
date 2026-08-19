@@ -129,8 +129,20 @@ export function ChecklistIcon(props) {
   );
 }
 
+export function SuitcaseIcon(props) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" {...props}>
+      <rect x="2.5" y="6.5" width="15" height="10.5" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7.3 6.5V4.8a1.5 1.5 0 0 1 1.5-1.5h2.4a1.5 1.5 0 0 1 1.5 1.5v1.7" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M2.5 11h15" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8.7 11v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M11.3 11v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export const PAY_ICONS = { Cash: CashIcon, Debit: DebitIcon, Credit: CreditIcon };
-export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon, calendar: CalendarIcon, todo: ChecklistIcon };
+export const TAB_ICONS = { home: HomeIcon, plan: PlanIcon, map: MapIcon, budget: BudgetIcon, bookings: TicketIcon, calendar: CalendarIcon, todo: ChecklistIcon, packing: SuitcaseIcon };
 
 export function SearchIcon(props) {
   return (
