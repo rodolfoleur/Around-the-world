@@ -27,12 +27,14 @@ const TABS = [
 ];
 
 /** The full single-trip experience — tab bar, screens and sheets — for one trip descriptor.
- * `members` (household members with display_name/color) is optional and
- * only used by Packing, for the per-person assignee badges — every other
- * screen here works fine without it. */
-export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip, members }) {
+ * `members` (household members with display_name/color) and `trips` (every
+ * trip this household has) are both optional and only used by Packing —
+ * for the per-person assignee badges and "copy from another trip" —
+ * every other screen here works fine without either. */
+export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip, members, trips }) {
   const trip = useTripState(meta, onUpdateTrip);
   const { state, go, closeSheet } = trip;
+  const otherTrips = trips ? trips.filter((t) => t.id !== meta.id) : [];
 
   return (
     <>
@@ -44,7 +46,7 @@ export default function TripView({ meta, onBack, onUpdateTrip, onDeleteTrip, mem
         {state.tab === 'bookings' && <Bookings trip={trip} />}
         {state.tab === 'calendar' && <Calendar trip={trip} />}
         {state.tab === 'todo' && <Todo trip={trip} />}
-        {state.tab === 'packing' && <Packing trip={trip} members={members} />}
+        {state.tab === 'packing' && <Packing trip={trip} members={members} otherTrips={otherTrips} />}
       </div>
 
       <nav className="tabbar" aria-label="Primary">

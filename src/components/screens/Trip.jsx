@@ -99,8 +99,9 @@ function DeleteTripSection({ onDeleteTrip, title }) {
 }
 
 export default function Trip({ trip, onBack, onDeleteTrip }) {
-  const { meta, days, bookings, go, openBooking, total, rows, catMap, fmt } = trip;
+  const { meta, days, bookings, go, openBooking, total, rows, catMap, fmt, packing } = trip;
   const visibleBookings = bookings.filter((b) => !b.deleted);
+  const packedCount = packing.filter((p) => p.packed).length;
 
   const catList = Object.keys(catMap)
     .map((k) => ({ label: k, n: catMap[k], color: CAT_COLOR[k] || '#a09889' }))
@@ -185,7 +186,7 @@ export default function Trip({ trip, onBack, onDeleteTrip }) {
 
       <LocationStrip trip={trip} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 11, marginBottom: 22 }}>
         <button type="button" className="card-btn" onClick={() => go('budget')} style={{ padding: '15px 15px 14px' }}>
           <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Paid so far</div>
           <div className="mono" style={{ fontSize: 22, letterSpacing: '-.02em' }}>£{fmt(total)}</div>
@@ -217,6 +218,21 @@ export default function Trip({ trip, onBack, onDeleteTrip }) {
             </>
           ) : (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 11 }}>None filed yet</div>
+          )}
+        </button>
+
+        <button type="button" className="card-btn" onClick={() => go('packing')} style={{ padding: '15px 15px 14px' }}>
+          <div className="mono" style={{ fontSize: 9.5, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 9 }}>Packing</div>
+          <div className="mono" style={{ fontSize: 22, letterSpacing: '-.02em' }}>{packedCount}/{packing.length} <span style={{ color: '#c9c2b4' }}>packed</span></div>
+          {packing.length > 0 ? (
+            <>
+              <div className="bar-track" style={{ marginTop: 11, height: 5 }}>
+                <span style={{ background: TERRA, width: (packedCount / packing.length * 100) + '%' }} />
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 7 }}>{packing.length - packedCount} left</div>
+            </>
+          ) : (
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 11 }}>Nothing added yet</div>
           )}
         </button>
       </div>

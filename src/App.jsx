@@ -60,6 +60,7 @@ function HouseholdApp({ auth }) {
             onUpdateTrip={(patch) => updateTrip(meta.id, patch)}
             onDeleteTrip={handleDeleteTrip}
             members={auth.members}
+            trips={trips}
           />
         </ErrorBoundary>
       </>

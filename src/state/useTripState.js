@@ -393,6 +393,19 @@ export function useTripState(meta, onUpdateTrip) {
     onUpdateTrip({ packing: arr.filter((p) => p.id !== id) });
   }, [onUpdateTrip]);
 
+  /** Bulk-adds packing items (used by "copy from another trip") in one
+   * write rather than one onUpdateTrip per item — both faster and avoids
+   * N racing writes each reading a stale metaRef.current.packing. Callers
+   * are expected to have already deduped against what's already on the
+   * list; this just assigns fresh ids and resets packed to false, since
+   * "already packed on a past trip" doesn't mean packed on this one. */
+  const addPackingItems = useCallback((items) => {
+    if (!items.length) return;
+    const arr = metaRef.current.packing || EMPTY_ARR;
+    const stamped = items.map((p, i) => ({ ...p, id: `pack-${Date.now()}-${i}`, packed: false }));
+    onUpdateTrip({ packing: [...arr, ...stamped] });
+  }, [onUpdateTrip]);
+
   /** Sets (or clears, with url=null) a custom photo for one location —
    * keyed by the location's display name, so it works the same for a
    * curated city or any free-text one a user typed into a day's City field.
@@ -481,7 +494,7 @@ export function useTripState(meta, onUpdateTrip) {
     openAddCardSheet, addExpense, addActivity, addBooking, deleteBooking, addCard, updateOvernight, updateDayCity, goToDay,
     addTodo, toggleTodo, removeTodo, setPhoto, clearPhoto, setPhotos, updateExpenseMethod, deleteExpense,
     toggleRoadTrip, addJourneyLeg, updateJourneyLeg, deleteJourneyLeg,
-    addPackingItem, togglePackingItem, removePackingItem,
+    addPackingItem, togglePackingItem, removePackingItem, addPackingItems,
     days, bookings, day, dayExtra, allCosts, rows, total, catMap, methodMap, categories, cards, todos, photos, fmt,
     roadTrip, journeyLegs, packing,
   };
